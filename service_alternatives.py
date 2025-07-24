@@ -106,7 +106,7 @@ def main():
     try:
         finder = KeywordSynonymFinder()
         # The path to your keywords file.
-        keyword_file_path = "/Users/javad/Documents/MEGA/Workspace/VisualStudio/Local_DreamKG/v5_real_data/keywords.txt"
+        keyword_file_path = "DreamKG/keywords.txt"
         keywords = finder.read_keywords(keyword_file_path)
 
         if not keywords:

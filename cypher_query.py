@@ -315,7 +315,7 @@ def main():
     load_dotenv()
     GROQ_API_KEY = os.environ.get("GROQ_API_KEY")
     # PLEASE UPDATE THESE PATHS to 'keywords.txt' and your desired log directory
-    BASE_DIR = 'Local_DreamKG/v5_real_data' # Assuming script is run from the project root
+    BASE_DIR = 'DreamKG' # Assuming script is run from the project root
     ADDRESS_FILE = os.path.join(BASE_DIR, 'keywords.txt') 
     SERVICE_FILE = os.path.join(BASE_DIR, 'keywords.txt')
     LOG_DIR = os.path.join(BASE_DIR, 'logs')

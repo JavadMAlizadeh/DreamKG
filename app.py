@@ -23,7 +23,7 @@ class Neo4jApp:
         load_dotenv()
 
         # --- Use a relative path for the log directory ---
-        script_dir = os.path.dirname(__file__)
+        script_dir = 'DreamKG'
         self.log_directory = os.path.join(script_dir, 'logs')
         self.logger = self._setup_logger()
 
