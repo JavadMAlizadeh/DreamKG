@@ -2,3 +2,5 @@ streamlit
 neo4j
 groq
 python-dotenv
+base64
+pathlib
