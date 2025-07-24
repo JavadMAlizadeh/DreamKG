@@ -8,7 +8,7 @@ import time
 # Sets the title, icon, and layout for the web app. This should be the first Streamlit command.
 st.set_page_config(
     page_title="DreamKG",
-    page_icon="/Users/javad/Documents/MEGA/Temple University/Lab/KG/logo.png",
+    page_icon="DreamKG/logo.png",
     layout="centered",
 )
 
@@ -42,7 +42,7 @@ def get_img_as_base64(file):
     return base64.b64encode(data).decode()
 
 # --- Load the image ---
-img = get_img_as_base64("/Users/javad/Documents/MEGA/Workspace/VisualStudio/DreamKG/logo.png")
+img = get_img_as_base64("DreamKG/logo.png")
 
 # --- Custom Title using a single HTML block ---
 if img:
