@@ -3,3 +3,6 @@ neo4j
 groq
 python-dotenv
 pathlib
+geopy
+pydeck
+pandas

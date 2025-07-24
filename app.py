@@ -231,7 +231,8 @@ class Neo4jApp:
         cypher_query = self.query_processor.generate_cypher_query(user_query)
         if not cypher_query or not cypher_query.strip():
             self.logger.error("QueryProcessor failed to generate a Cypher query.")
-            return "I'm sorry, I couldn't understand your request. Could you please rephrase it?"
+            # Return a tuple to match the expected new output format
+            return "I'm sorry, I couldn't understand your request. Could you please rephrase it?", []
 
         # 2. Execute Query
         raw_results = self.execute_cypher_query(cypher_query)
@@ -240,7 +241,8 @@ class Neo4jApp:
         polished_response = self.polish_results_with_llm(raw_results, user_query)
         
         self.logger.info(f"--- Finished Processing Streamlit Request for: '{user_query}' --- \n")
-        return polished_response
+        # Return both the polished text and the raw data
+        return polished_response, raw_results
 
 def main():
     """

@@ -1,0 +1,1407 @@
+2025-07-24 14:34:31,546 - Neo4jApp - INFO - Initializing Neo4j Application...
+2025-07-24 14:34:31,594 - Neo4jApp - INFO - Groq client initialized successfully.
+2025-07-24 14:34:31,594 - Neo4jApp - INFO - Looking for keywords file at: /Users/javad/Documents/MEGA/Workspace/VisualStudio/DreamKG/keywords.txt
+2025-07-24 14:34:31,639 - Neo4jApp - INFO - QueryProcessor initialized successfully.
+2025-07-24 14:34:32,356 - Neo4jApp - INFO - Neo4j driver initialized and connection verified. 
+
+2025-07-24 14:34:36,922 - Neo4jApp - INFO - ================== New Streamlit Request: '19121' ==================
+
+2025-07-24 14:34:37,590 - Neo4jApp - INFO - INPUT to Neo4j Executor (Cypher Query):
+
+MATCH (org:Organization)
+
+// To use a filter, remove the '//' from the start of the line and edit the value.
+WHERE 1=1 // This dummy condition lets you safely uncomment any AND line below.
+
+  // -- Filters on Organization Properties --
+  // AND toLower(TRIM(replace(org.name, '\u00A0', ' '))) CONTAINS toLower('YOUR_NAME_HERE')
+  // AND toLower(TRIM(replace(org.phone, '\u00A0', ' '))) CONTAINS toLower('YOUR_PHONE_HERE')
+  // AND toLower(TRIM(replace(org.status, '\u00A0', ' '))) CONTAINS toLower('YOUR_STATUS_HERE')
+
+  // -- Filters on Location Properties --
+  AND EXISTS{(org)-[:HAS_LOCATION]->(l:Location WHERE l.zipCode CONTAINS '19103' OR l.zipCode CONTAINS '19121' OR l.zipCode CONTAINS '19123' OR l.zipCode CONTAINS '19130')}
+
+  // -- Filters on Service Properties --
+  // AND EXISTS{(org)-[:PROVIDES]->(s:Service WHERE toLower(TRIM(s.name)) CONTAINS toLower('YOUR_SERVICE_NAME_HERE'))}
+  // AND EXISTS{(org)-[:PROVIDES]->(s:Service WHERE toLower(TRIM(s.type)) CONTAINS toLower('YOUR_SERVICE_TYPE_HERE'))}
+
+  // -- Filters on Time Properties --
+  // AND EXISTS{(org)-[:HAS_HOURS]->(t:Time WHERE toLower(TRIM(t.day)) CONTAINS toLower('YOUR_TIME_DAY_HERE'))}
+  // AND EXISTS{(org)-[:HAS_HOURS]->(t:Time WHERE toLower(TRIM(t.hours)) CONTAINS toLower('YOUR_TIME_HOURS_HERE'))}
+
+// The RETURN clause remains the same to prevent data repetition.
+RETURN org,
+       [(org)-[:HAS_LOCATION]->(loc) | loc] AS locations,
+       [(org)-[:PROVIDES]->(svc) | svc] AS services,
+       [(org)-[:HAS_HOURS]->(tm) | tm] AS operatingHours
+
+2025-07-24 14:34:37,659 - Neo4jApp - INFO - OUTPUT from Neo4j Executor (6 records found in 0.07s):
+[
+  {
+    "org": {
+      "phone": "(215) 686-5322",
+      "name": "Parkway Central Library",
+      "status": "Open"
+    },
+    "locations": [
+      {
+        "zipCode": "19103",
+        "streetAddress": "1901 Vine Street",
+        "city": "Philadelphia",
+        "state": "PA"
+      }
+    ],
+    "services": [
+      {
+        "name": "Research Library",
+        "type": "Free"
+      },
+      {
+        "name": "Special Collections",
+        "type": "Free"
+      },
+      {
+        "name": "Tours",
+        "type": "Free"
+      },
+      {
+        "name": "Author Events",
+        "type": "Free"
+      },
+      {
+        "name": "Exhibitions",
+        "type": "Free"
+      },
+      {
+        "name": "Study Rooms",
+        "type": "Free"
+      },
+      {
+        "name": "Scanners",
+        "type": "Free"
+      },
+      {
+        "name": "Wi-Fi.",
+        "type": "Free"
+      },
+      {
+        "name": "Printing",
+        "type": "Paid"
+      },
+      {
+        "name": "Copying",
+        "type": "Paid"
+      }
+    ],
+    "operatingHours": [
+      {
+        "hours": "9:00 AM - 8:00 PM",
+        "day": "Monday"
+      },
+      {
+        "hours": "9:00 AM - 8:00 PM",
+        "day": "Tuesday"
+      },
+      {
+        "hours": "9:00 AM - 8:00 PM",
+        "day": "Wednesday"
+      },
+      {
+        "hours": "9:00 AM - 8:00 PM",
+        "day": "Thursday"
+      },
+      {
+        "hours": "9:00 AM - 5:00 PM",
+        "day": "Friday"
+      },
+      {
+        "hours": "9:00 AM - 5:00 PM",
+        "day": "Saturday"
+      }
+    ]
+  },
+  {
+    "org": {
+      "phone": "(215) 685-2766",
+      "name": "Cecil B. Moore Library",
+      "status": "Open"
+    },
+    "locations": [
+      {
+        "zipCode": "19121",
+        "streetAddress": "2320 Cecil B. Moore Avenue",
+        "city": "Philadelphia",
+        "state": "PA"
+      }
+    ],
+    "services": [
+      {
+        "name": "Printing",
+        "type": "Paid"
+      },
+      {
+        "name": "Copying",
+        "type": "Paid"
+      },
+      {
+        "name": "Public Computers",
+        "type": "Free"
+      },
+      {
+        "name": "Wi-Fi",
+        "type": "Free"
+      },
+      {
+        "name": "Meeting Rooms.",
+        "type": "Free"
+      }
+    ],
+    "operatingHours": [
+      {
+        "hours": "10:00 AM - 5:00 PM",
+        "day": "Wednesday"
+      },
+      {
+        "hours": "10:00 AM - 5:00 PM",
+        "day": "Thursday"
+      },
+      {
+        "hours": "10:00 AM - 5:00 PM",
+        "day": "Friday"
+      },
+      {
+        "hours": "10:00 AM - 6:00 PM",
+        "day": "Monday"
+      },
+      {
+        "hours": "10:00 AM - 6:00 PM",
+        "day": "Tuesday"
+      }
+    ]
+  },
+  {
+    "org": {
+      "phone": "(215) 683-3213",
+      "name": "Library of Accessible Media for Pennsylvanians (LAMP)",
+      "status": "Open"
+    },
+    "locations": [
+      {
+        "zipCode": "19130",
+        "streetAddress": "1500 Spring Garden Street, Suite 230",
+        "city": "Philadelphia",
+        "state": "PA"
+      }
+    ],
+    "services": [
+      {
+        "name": "All services are free",
+        "type": "Free"
+      },
+      {
+        "name": "including audio/braille/large print books",
+        "type": "Free"
+      },
+      {
+        "name": "playback equipment",
+        "type": "Free"
+      },
+      {
+        "name": "and postage-free mail delivery.",
+        "type": "Free"
+      }
+    ],
+    "operatingHours": [
+      {
+        "hours": "10:00 AM - 5:00 PM",
+        "day": "Wednesday"
+      },
+      {
+        "hours": "10:00 AM - 5:00 PM",
+        "day": "Thursday"
+      },
+      {
+        "hours": "10:00 AM - 5:00 PM",
+        "day": "Friday"
+      },
+      {
+        "hours": "10:00 AM - 5:00 PM",
+        "day": "Saturday"
+      },
+      {
+        "hours": "10:00 AM - 6:00 PM",
+        "day": "Monday"
+      },
+      {
+        "hours": "10:00 AM - 6:00 PM",
+        "day": "Tuesday"
+      }
+    ]
+  },
+  {
+    "org": {
+      "phone": "(215) 685-6621",
+      "name": "Philadelphia City Institute",
+      "status": "Open"
+    },
+    "locations": [
+      {
+        "zipCode": "19103",
+        "streetAddress": "1905 Locust Street",
+        "city": "Philadelphia",
+        "state": "PA"
+      }
+    ],
+    "services": [
+      {
+        "name": "Wi-Fi.",
+        "type": "Free"
+      },
+      {
+        "name": "Printing",
+        "type": "Paid"
+      },
+      {
+        "name": "Copying",
+        "type": "Paid"
+      },
+      {
+        "name": "Public Computers",
+        "type": "Free"
+      }
+    ],
+    "operatingHours": [
+      {
+        "hours": "10:00 AM - 5:00 PM",
+        "day": "Wednesday"
+      },
+      {
+        "hours": "10:00 AM - 5:00 PM",
+        "day": "Thursday"
+      },
+      {
+        "hours": "10:00 AM - 5:00 PM",
+        "day": "Friday"
+      },
+      {
+        "hours": "10:00 AM - 6:00 PM",
+        "day": "Monday"
+      },
+      {
+        "hours": "10:00 AM - 6:00 PM",
+        "day": "Tuesday"
+      }
+    ]
+  },
+  {
+    "org": {
+      "phone": "(215) 686-1768",
+      "name": "Ramonita de Rodriguez Library",
+      "status": "Open"
+    },
+    "locations": [
+      {
+        "zipCode": "19123",
+        "streetAddress": "600 West Girard Avenue",
+        "city": "Philadelphia",
+        "state": "PA"
+      }
+    ],
+    "services": [
+      {
+        "name": "Printing",
+        "type": "Paid"
+      },
+      {
+        "name": "Copying",
+        "type": "Paid"
+      },
+      {
+        "name": "Public Computers",
+        "type": "Free"
+      },
+      {
+        "name": "Wi-Fi",
+        "type": "Free"
+      },
+      {
+        "name": "Toddler Story Time.",
+        "type": "Free"
+      }
+    ],
+    "operatingHours": [
+      {
+        "hours": "11:00 AM - 7:00 PM",
+        "day": "Monday"
+      },
+      {
+        "hours": "11:00 AM - 7:00 PM",
+        "day": "Tuesday"
+      },
+      {
+        "hours": "10:00 AM - 5:00 PM",
+        "day": "Wednesday"
+      },
+      {
+        "hours": "10:00 AM - 5:00 PM",
+        "day": "Thursday"
+      },
+      {
+        "hours": "10:00 AM - 5:00 PM",
+        "day": "Friday"
+      },
+      {
+        "hours": "10:00 AM - 5:00 PM",
+        "day": "Saturday"
+      }
+    ]
+  },
+  {
+    "org": {
+      "phone": "(215) 732-1600",
+      "name": "The Rosenbach",
+      "status": "Open"
+    },
+    "locations": [
+      {
+        "zipCode": "19103",
+        "streetAddress": "2008-2010 Delancey Place",
+        "city": "Philadelphia",
+        "state": "PA"
+      }
+    ],
+    "services": [
+      {
+        "name": "Museum and research library offering tours",
+        "type": "Free"
+      },
+      {
+        "name": "exhibitions",
+        "type": "Free"
+      },
+      {
+        "name": "and reading courses.",
+        "type": "Free"
+      },
+      {
+        "name": "Admission fees may apply.",
+        "type": "Paid"
+      }
+    ],
+    "operatingHours": [
+      {
+        "hours": "11:00 AM - 7:00 PM",
+        "day": "Monday"
+      },
+      {
+        "hours": "11:00 AM - 7:00 PM",
+        "day": "Tuesday"
+      },
+      {
+        "hours": "10:00 AM - 5:00 PM",
+        "day": "Wednesday"
+      },
+      {
+        "hours": "10:00 AM - 5:00 PM",
+        "day": "Thursday"
+      },
+      {
+        "hours": "10:00 AM - 5:00 PM",
+        "day": "Friday"
+      },
+      {
+        "hours": "10:00 AM - 5:00 PM",
+        "day": "Saturday"
+      }
+    ]
+  }
+]
+2025-07-24 14:34:37,661 - Neo4jApp - INFO - INPUT to Polishing LLM (Original Query): '19121'
+2025-07-24 14:34:37,661 - Neo4jApp - INFO - INPUT to Polishing LLM (Neo4j Results):
+[
+  {
+    "org": {
+      "phone": "(215) 686-5322",
+      "name": "Parkway Central Library",
+      "status": "Open"
+    },
+    "locations": [
+      {
+        "zipCode": "19103",
+        "streetAddress": "1901 Vine Street",
+        "city": "Philadelphia",
+        "state": "PA"
+      }
+    ],
+    "services": [
+      {
+        "name": "Research Library",
+        "type": "Free"
+      },
+      {
+        "name": "Special Collections",
+        "type": "Free"
+      },
+      {
+        "name": "Tours",
+        "type": "Free"
+      },
+      {
+        "name": "Author Events",
+        "type": "Free"
+      },
+      {
+        "name": "Exhibitions",
+        "type": "Free"
+      },
+      {
+        "name": "Study Rooms",
+        "type": "Free"
+      },
+      {
+        "name": "Scanners",
+        "type": "Free"
+      },
+      {
+        "name": "Wi-Fi.",
+        "type": "Free"
+      },
+      {
+        "name": "Printing",
+        "type": "Paid"
+      },
+      {
+        "name": "Copying",
+        "type": "Paid"
+      }
+    ],
+    "operatingHours": [
+      {
+        "hours": "9:00 AM - 8:00 PM",
+        "day": "Monday"
+      },
+      {
+        "hours": "9:00 AM - 8:00 PM",
+        "day": "Tuesday"
+      },
+      {
+        "hours": "9:00 AM - 8:00 PM",
+        "day": "Wednesday"
+      },
+      {
+        "hours": "9:00 AM - 8:00 PM",
+        "day": "Thursday"
+      },
+      {
+        "hours": "9:00 AM - 5:00 PM",
+        "day": "Friday"
+      },
+      {
+        "hours": "9:00 AM - 5:00 PM",
+        "day": "Saturday"
+      }
+    ]
+  },
+  {
+    "org": {
+      "phone": "(215) 685-2766",
+      "name": "Cecil B. Moore Library",
+      "status": "Open"
+    },
+    "locations": [
+      {
+        "zipCode": "19121",
+        "streetAddress": "2320 Cecil B. Moore Avenue",
+        "city": "Philadelphia",
+        "state": "PA"
+      }
+    ],
+    "services": [
+      {
+        "name": "Printing",
+        "type": "Paid"
+      },
+      {
+        "name": "Copying",
+        "type": "Paid"
+      },
+      {
+        "name": "Public Computers",
+        "type": "Free"
+      },
+      {
+        "name": "Wi-Fi",
+        "type": "Free"
+      },
+      {
+        "name": "Meeting Rooms.",
+        "type": "Free"
+      }
+    ],
+    "operatingHours": [
+      {
+        "hours": "10:00 AM - 5:00 PM",
+        "day": "Wednesday"
+      },
+      {
+        "hours": "10:00 AM - 5:00 PM",
+        "day": "Thursday"
+      },
+      {
+        "hours": "10:00 AM - 5:00 PM",
+        "day": "Friday"
+      },
+      {
+        "hours": "10:00 AM - 6:00 PM",
+        "day": "Monday"
+      },
+      {
+        "hours": "10:00 AM - 6:00 PM",
+        "day": "Tuesday"
+      }
+    ]
+  },
+  {
+    "org": {
+      "phone": "(215) 683-3213",
+      "name": "Library of Accessible Media for Pennsylvanians (LAMP)",
+      "status": "Open"
+    },
+    "locations": [
+      {
+        "zipCode": "19130",
+        "streetAddress": "1500 Spring Garden Street, Suite 230",
+        "city": "Philadelphia",
+        "state": "PA"
+      }
+    ],
+    "services": [
+      {
+        "name": "All services are free",
+        "type": "Free"
+      },
+      {
+        "name": "including audio/braille/large print books",
+        "type": "Free"
+      },
+      {
+        "name": "playback equipment",
+        "type": "Free"
+      },
+      {
+        "name": "and postage-free mail delivery.",
+        "type": "Free"
+      }
+    ],
+    "operatingHours": [
+      {
+        "hours": "10:00 AM - 5:00 PM",
+        "day": "Wednesday"
+      },
+      {
+        "hours": "10:00 AM - 5:00 PM",
+        "day": "Thursday"
+      },
+      {
+        "hours": "10:00 AM - 5:00 PM",
+        "day": "Friday"
+      },
+      {
+        "hours": "10:00 AM - 5:00 PM",
+        "day": "Saturday"
+      },
+      {
+        "hours": "10:00 AM - 6:00 PM",
+        "day": "Monday"
+      },
+      {
+        "hours": "10:00 AM - 6:00 PM",
+        "day": "Tuesday"
+      }
+    ]
+  },
+  {
+    "org": {
+      "phone": "(215) 685-6621",
+      "name": "Philadelphia City Institute",
+      "status": "Open"
+    },
+    "locations": [
+      {
+        "zipCode": "19103",
+        "streetAddress": "1905 Locust Street",
+        "city": "Philadelphia",
+        "state": "PA"
+      }
+    ],
+    "services": [
+      {
+        "name": "Wi-Fi.",
+        "type": "Free"
+      },
+      {
+        "name": "Printing",
+        "type": "Paid"
+      },
+      {
+        "name": "Copying",
+        "type": "Paid"
+      },
+      {
+        "name": "Public Computers",
+        "type": "Free"
+      }
+    ],
+    "operatingHours": [
+      {
+        "hours": "10:00 AM - 5:00 PM",
+        "day": "Wednesday"
+      },
+      {
+        "hours": "10:00 AM - 5:00 PM",
+        "day": "Thursday"
+      },
+      {
+        "hours": "10:00 AM - 5:00 PM",
+        "day": "Friday"
+      },
+      {
+        "hours": "10:00 AM - 6:00 PM",
+        "day": "Monday"
+      },
+      {
+        "hours": "10:00 AM - 6:00 PM",
+        "day": "Tuesday"
+      }
+    ]
+  },
+  {
+    "org": {
+      "phone": "(215) 686-1768",
+      "name": "Ramonita de Rodriguez Library",
+      "status": "Open"
+    },
+    "locations": [
+      {
+        "zipCode": "19123",
+        "streetAddress": "600 West Girard Avenue",
+        "city": "Philadelphia",
+        "state": "PA"
+      }
+    ],
+    "services": [
+      {
+        "name": "Printing",
+        "type": "Paid"
+      },
+      {
+        "name": "Copying",
+        "type": "Paid"
+      },
+      {
+        "name": "Public Computers",
+        "type": "Free"
+      },
+      {
+        "name": "Wi-Fi",
+        "type": "Free"
+      },
+      {
+        "name": "Toddler Story Time.",
+        "type": "Free"
+      }
+    ],
+    "operatingHours": [
+      {
+        "hours": "11:00 AM - 7:00 PM",
+        "day": "Monday"
+      },
+      {
+        "hours": "11:00 AM - 7:00 PM",
+        "day": "Tuesday"
+      },
+      {
+        "hours": "10:00 AM - 5:00 PM",
+        "day": "Wednesday"
+      },
+      {
+        "hours": "10:00 AM - 5:00 PM",
+        "day": "Thursday"
+      },
+      {
+        "hours": "10:00 AM - 5:00 PM",
+        "day": "Friday"
+      },
+      {
+        "hours": "10:00 AM - 5:00 PM",
+        "day": "Saturday"
+      }
+    ]
+  },
+  {
+    "org": {
+      "phone": "(215) 732-1600",
+      "name": "The Rosenbach",
+      "status": "Open"
+    },
+    "locations": [
+      {
+        "zipCode": "19103",
+        "streetAddress": "2008-2010 Delancey Place",
+        "city": "Philadelphia",
+        "state": "PA"
+      }
+    ],
+    "services": [
+      {
+        "name": "Museum and research library offering tours",
+        "type": "Free"
+      },
+      {
+        "name": "exhibitions",
+        "type": "Free"
+      },
+      {
+        "name": "and reading courses.",
+        "type": "Free"
+      },
+      {
+        "name": "Admission fees may apply.",
+        "type": "Paid"
+      }
+    ],
+    "operatingHours": [
+      {
+        "hours": "11:00 AM - 7:00 PM",
+        "day": "Monday"
+      },
+      {
+        "hours": "11:00 AM - 7:00 PM",
+        "day": "Tuesday"
+      },
+      {
+        "hours": "10:00 AM - 5:00 PM",
+        "day": "Wednesday"
+      },
+      {
+        "hours": "10:00 AM - 5:00 PM",
+        "day": "Thursday"
+      },
+      {
+        "hours": "10:00 AM - 5:00 PM",
+        "day": "Friday"
+      },
+      {
+        "hours": "10:00 AM - 5:00 PM",
+        "day": "Saturday"
+      }
+    ]
+  }
+]
+2025-07-24 14:34:38,833 - Neo4jApp - INFO - OUTPUT from Polishing LLM (took 1.17s | Prompt: 2603, Completion: 196, Total: 2799 tokens):
+Based on the provided JSON data, I found a library that matches the zip code "19121" requested by the user.
+
+The Cecil B. Moore Library, located at 2320 Cecil B. Moore Avenue, Philadelphia, PA 19121, offers the following services:
+
+* Printing (paid)
+* Copying (paid)
+* Public Computers (free)
+* Wi-Fi (free)
+* Meeting Rooms (free)
+
+The operating hours for this library are:
+* Monday: 10:00 AM - 6:00 PM
+* Tuesday: 10:00 AM - 6:00 PM
+* Wednesday: 10:00 AM - 5:00 PM
+* Thursday: 10:00 AM - 5:00 PM
+* Friday: 10:00 AM - 5:00 PM
+
+Please note that the library's status is "Open". You can contact them at (215) 685-2766 for more information.
+2025-07-24 14:34:38,833 - Neo4jApp - INFO - --- Finished Processing Streamlit Request for: '19121' --- 
+
+2025-07-24 14:36:09,791 - Neo4jApp - INFO - ================== New Streamlit Request: 'libraries around City Hall' ==================
+
+2025-07-24 14:36:10,463 - Neo4jApp - INFO - INPUT to Neo4j Executor (Cypher Query):
+
+MATCH (org:Organization)
+
+// To use a filter, remove the '//' from the start of the line and edit the value.
+WHERE 1=1 // This dummy condition lets you safely uncomment any AND line below.
+
+  // -- Filters on Organization Properties --
+  // AND toLower(TRIM(replace(org.name, '\u00A0', ' '))) CONTAINS toLower('YOUR_NAME_HERE')
+  // AND toLower(TRIM(replace(org.phone, '\u00A0', ' '))) CONTAINS toLower('YOUR_PHONE_HERE')
+  // AND toLower(TRIM(replace(org.status, '\u00A0', ' '))) CONTAINS toLower('YOUR_STATUS_HERE')
+
+  // -- Filters on Location Properties --
+  AND EXISTS{(org)-[:HAS_LOCATION]->(l:Location WHERE l.zipCode CONTAINS '19103' OR l.zipCode CONTAINS '19106')}
+
+  // -- Filters on Service Properties --
+  // AND EXISTS{(org)-[:PROVIDES]->(s:Service WHERE toLower(TRIM(s.name)) CONTAINS toLower('YOUR_SERVICE_NAME_HERE'))}
+  // AND EXISTS{(org)-[:PROVIDES]->(s:Service WHERE toLower(TRIM(s.type)) CONTAINS toLower('YOUR_SERVICE_TYPE_HERE'))}
+
+  // -- Filters on Time Properties --
+  // AND EXISTS{(org)-[:HAS_HOURS]->(t:Time WHERE toLower(TRIM(t.day)) CONTAINS toLower('YOUR_TIME_DAY_HERE'))}
+  // AND EXISTS{(org)-[:HAS_HOURS]->(t:Time WHERE toLower(TRIM(t.hours)) CONTAINS toLower('YOUR_TIME_HOURS_HERE'))}
+
+// The RETURN clause remains the same to prevent data repetition.
+RETURN org,
+       [(org)-[:HAS_LOCATION]->(loc) | loc] AS locations,
+       [(org)-[:PROVIDES]->(svc) | svc] AS services,
+       [(org)-[:HAS_HOURS]->(tm) | tm] AS operatingHours
+
+2025-07-24 14:36:10,764 - Neo4jApp - INFO - OUTPUT from Neo4j Executor (4 records found in 0.30s):
+[
+  {
+    "org": {
+      "phone": "(215) 686-5322",
+      "name": "Parkway Central Library",
+      "status": "Open"
+    },
+    "locations": [
+      {
+        "zipCode": "19103",
+        "streetAddress": "1901 Vine Street",
+        "city": "Philadelphia",
+        "state": "PA"
+      }
+    ],
+    "services": [
+      {
+        "name": "Research Library",
+        "type": "Free"
+      },
+      {
+        "name": "Special Collections",
+        "type": "Free"
+      },
+      {
+        "name": "Tours",
+        "type": "Free"
+      },
+      {
+        "name": "Author Events",
+        "type": "Free"
+      },
+      {
+        "name": "Exhibitions",
+        "type": "Free"
+      },
+      {
+        "name": "Study Rooms",
+        "type": "Free"
+      },
+      {
+        "name": "Scanners",
+        "type": "Free"
+      },
+      {
+        "name": "Wi-Fi.",
+        "type": "Free"
+      },
+      {
+        "name": "Printing",
+        "type": "Paid"
+      },
+      {
+        "name": "Copying",
+        "type": "Paid"
+      }
+    ],
+    "operatingHours": [
+      {
+        "hours": "9:00 AM - 8:00 PM",
+        "day": "Monday"
+      },
+      {
+        "hours": "9:00 AM - 8:00 PM",
+        "day": "Tuesday"
+      },
+      {
+        "hours": "9:00 AM - 8:00 PM",
+        "day": "Wednesday"
+      },
+      {
+        "hours": "9:00 AM - 8:00 PM",
+        "day": "Thursday"
+      },
+      {
+        "hours": "9:00 AM - 5:00 PM",
+        "day": "Friday"
+      },
+      {
+        "hours": "9:00 AM - 5:00 PM",
+        "day": "Saturday"
+      }
+    ]
+  },
+  {
+    "org": {
+      "phone": "(215) 685-1633",
+      "name": "Independence Library",
+      "status": "Open"
+    },
+    "locations": [
+      {
+        "zipCode": "19106",
+        "streetAddress": "18 South 7th Street",
+        "city": "Philadelphia",
+        "state": "PA"
+      }
+    ],
+    "services": [
+      {
+        "name": "Printing",
+        "type": "Paid"
+      },
+      {
+        "name": "Copying",
+        "type": "Paid"
+      },
+      {
+        "name": "Public Computers",
+        "type": "Free"
+      },
+      {
+        "name": "Wi-Fi",
+        "type": "Free"
+      },
+      {
+        "name": "Chinese-language Collection.",
+        "type": "Free"
+      }
+    ],
+    "operatingHours": [
+      {
+        "hours": "11:00 AM - 7:00 PM",
+        "day": "Monday"
+      },
+      {
+        "hours": "11:00 AM - 7:00 PM",
+        "day": "Tuesday"
+      },
+      {
+        "hours": "10:00 AM - 5:00 PM",
+        "day": "Wednesday"
+      },
+      {
+        "hours": "10:00 AM - 5:00 PM",
+        "day": "Thursday"
+      },
+      {
+        "hours": "10:00 AM - 5:00 PM",
+        "day": "Friday"
+      }
+    ]
+  },
+  {
+    "org": {
+      "phone": "(215) 685-6621",
+      "name": "Philadelphia City Institute",
+      "status": "Open"
+    },
+    "locations": [
+      {
+        "zipCode": "19103",
+        "streetAddress": "1905 Locust Street",
+        "city": "Philadelphia",
+        "state": "PA"
+      }
+    ],
+    "services": [
+      {
+        "name": "Wi-Fi.",
+        "type": "Free"
+      },
+      {
+        "name": "Printing",
+        "type": "Paid"
+      },
+      {
+        "name": "Copying",
+        "type": "Paid"
+      },
+      {
+        "name": "Public Computers",
+        "type": "Free"
+      }
+    ],
+    "operatingHours": [
+      {
+        "hours": "10:00 AM - 5:00 PM",
+        "day": "Wednesday"
+      },
+      {
+        "hours": "10:00 AM - 5:00 PM",
+        "day": "Thursday"
+      },
+      {
+        "hours": "10:00 AM - 5:00 PM",
+        "day": "Friday"
+      },
+      {
+        "hours": "10:00 AM - 6:00 PM",
+        "day": "Monday"
+      },
+      {
+        "hours": "10:00 AM - 6:00 PM",
+        "day": "Tuesday"
+      }
+    ]
+  },
+  {
+    "org": {
+      "phone": "(215) 732-1600",
+      "name": "The Rosenbach",
+      "status": "Open"
+    },
+    "locations": [
+      {
+        "zipCode": "19103",
+        "streetAddress": "2008-2010 Delancey Place",
+        "city": "Philadelphia",
+        "state": "PA"
+      }
+    ],
+    "services": [
+      {
+        "name": "Museum and research library offering tours",
+        "type": "Free"
+      },
+      {
+        "name": "exhibitions",
+        "type": "Free"
+      },
+      {
+        "name": "and reading courses.",
+        "type": "Free"
+      },
+      {
+        "name": "Admission fees may apply.",
+        "type": "Paid"
+      }
+    ],
+    "operatingHours": [
+      {
+        "hours": "11:00 AM - 7:00 PM",
+        "day": "Monday"
+      },
+      {
+        "hours": "11:00 AM - 7:00 PM",
+        "day": "Tuesday"
+      },
+      {
+        "hours": "10:00 AM - 5:00 PM",
+        "day": "Wednesday"
+      },
+      {
+        "hours": "10:00 AM - 5:00 PM",
+        "day": "Thursday"
+      },
+      {
+        "hours": "10:00 AM - 5:00 PM",
+        "day": "Friday"
+      },
+      {
+        "hours": "10:00 AM - 5:00 PM",
+        "day": "Saturday"
+      }
+    ]
+  }
+]
+2025-07-24 14:36:10,766 - Neo4jApp - INFO - INPUT to Polishing LLM (Original Query): 'libraries around City Hall'
+2025-07-24 14:36:10,766 - Neo4jApp - INFO - INPUT to Polishing LLM (Neo4j Results):
+[
+  {
+    "org": {
+      "phone": "(215) 686-5322",
+      "name": "Parkway Central Library",
+      "status": "Open"
+    },
+    "locations": [
+      {
+        "zipCode": "19103",
+        "streetAddress": "1901 Vine Street",
+        "city": "Philadelphia",
+        "state": "PA"
+      }
+    ],
+    "services": [
+      {
+        "name": "Research Library",
+        "type": "Free"
+      },
+      {
+        "name": "Special Collections",
+        "type": "Free"
+      },
+      {
+        "name": "Tours",
+        "type": "Free"
+      },
+      {
+        "name": "Author Events",
+        "type": "Free"
+      },
+      {
+        "name": "Exhibitions",
+        "type": "Free"
+      },
+      {
+        "name": "Study Rooms",
+        "type": "Free"
+      },
+      {
+        "name": "Scanners",
+        "type": "Free"
+      },
+      {
+        "name": "Wi-Fi.",
+        "type": "Free"
+      },
+      {
+        "name": "Printing",
+        "type": "Paid"
+      },
+      {
+        "name": "Copying",
+        "type": "Paid"
+      }
+    ],
+    "operatingHours": [
+      {
+        "hours": "9:00 AM - 8:00 PM",
+        "day": "Monday"
+      },
+      {
+        "hours": "9:00 AM - 8:00 PM",
+        "day": "Tuesday"
+      },
+      {
+        "hours": "9:00 AM - 8:00 PM",
+        "day": "Wednesday"
+      },
+      {
+        "hours": "9:00 AM - 8:00 PM",
+        "day": "Thursday"
+      },
+      {
+        "hours": "9:00 AM - 5:00 PM",
+        "day": "Friday"
+      },
+      {
+        "hours": "9:00 AM - 5:00 PM",
+        "day": "Saturday"
+      }
+    ]
+  },
+  {
+    "org": {
+      "phone": "(215) 685-1633",
+      "name": "Independence Library",
+      "status": "Open"
+    },
+    "locations": [
+      {
+        "zipCode": "19106",
+        "streetAddress": "18 South 7th Street",
+        "city": "Philadelphia",
+        "state": "PA"
+      }
+    ],
+    "services": [
+      {
+        "name": "Printing",
+        "type": "Paid"
+      },
+      {
+        "name": "Copying",
+        "type": "Paid"
+      },
+      {
+        "name": "Public Computers",
+        "type": "Free"
+      },
+      {
+        "name": "Wi-Fi",
+        "type": "Free"
+      },
+      {
+        "name": "Chinese-language Collection.",
+        "type": "Free"
+      }
+    ],
+    "operatingHours": [
+      {
+        "hours": "11:00 AM - 7:00 PM",
+        "day": "Monday"
+      },
+      {
+        "hours": "11:00 AM - 7:00 PM",
+        "day": "Tuesday"
+      },
+      {
+        "hours": "10:00 AM - 5:00 PM",
+        "day": "Wednesday"
+      },
+      {
+        "hours": "10:00 AM - 5:00 PM",
+        "day": "Thursday"
+      },
+      {
+        "hours": "10:00 AM - 5:00 PM",
+        "day": "Friday"
+      }
+    ]
+  },
+  {
+    "org": {
+      "phone": "(215) 685-6621",
+      "name": "Philadelphia City Institute",
+      "status": "Open"
+    },
+    "locations": [
+      {
+        "zipCode": "19103",
+        "streetAddress": "1905 Locust Street",
+        "city": "Philadelphia",
+        "state": "PA"
+      }
+    ],
+    "services": [
+      {
+        "name": "Wi-Fi.",
+        "type": "Free"
+      },
+      {
+        "name": "Printing",
+        "type": "Paid"
+      },
+      {
+        "name": "Copying",
+        "type": "Paid"
+      },
+      {
+        "name": "Public Computers",
+        "type": "Free"
+      }
+    ],
+    "operatingHours": [
+      {
+        "hours": "10:00 AM - 5:00 PM",
+        "day": "Wednesday"
+      },
+      {
+        "hours": "10:00 AM - 5:00 PM",
+        "day": "Thursday"
+      },
+      {
+        "hours": "10:00 AM - 5:00 PM",
+        "day": "Friday"
+      },
+      {
+        "hours": "10:00 AM - 6:00 PM",
+        "day": "Monday"
+      },
+      {
+        "hours": "10:00 AM - 6:00 PM",
+        "day": "Tuesday"
+      }
+    ]
+  },
+  {
+    "org": {
+      "phone": "(215) 732-1600",
+      "name": "The Rosenbach",
+      "status": "Open"
+    },
+    "locations": [
+      {
+        "zipCode": "19103",
+        "streetAddress": "2008-2010 Delancey Place",
+        "city": "Philadelphia",
+        "state": "PA"
+      }
+    ],
+    "services": [
+      {
+        "name": "Museum and research library offering tours",
+        "type": "Free"
+      },
+      {
+        "name": "exhibitions",
+        "type": "Free"
+      },
+      {
+        "name": "and reading courses.",
+        "type": "Free"
+      },
+      {
+        "name": "Admission fees may apply.",
+        "type": "Paid"
+      }
+    ],
+    "operatingHours": [
+      {
+        "hours": "11:00 AM - 7:00 PM",
+        "day": "Monday"
+      },
+      {
+        "hours": "11:00 AM - 7:00 PM",
+        "day": "Tuesday"
+      },
+      {
+        "hours": "10:00 AM - 5:00 PM",
+        "day": "Wednesday"
+      },
+      {
+        "hours": "10:00 AM - 5:00 PM",
+        "day": "Thursday"
+      },
+      {
+        "hours": "10:00 AM - 5:00 PM",
+        "day": "Friday"
+      },
+      {
+        "hours": "10:00 AM - 5:00 PM",
+        "day": "Saturday"
+      }
+    ]
+  }
+]
+2025-07-24 14:36:12,655 - Neo4jApp - INFO - OUTPUT from Polishing LLM (took 1.89s | Prompt: 1871, Completion: 480, Total: 2351 tokens):
+Here is a polished and factually accurate response based on the provided JSON data:
+
+If you're looking for libraries around City Hall in Philadelphia, here are some options:
+
+**Parkway Central Library**
+Located at 1901 Vine Street, Philadelphia, PA 19103
+Phone: (215) 686-5322
+Status: Open
+Operating Hours: Monday to Thursday: 9:00 AM - 8:00 PM, Friday and Saturday: 9:00 AM - 5:00 PM
+Services: This library offers a range of free services, including Research Library, Special Collections, Tours, Author Events, Exhibitions, Study Rooms, Scanners, and Wi-Fi. You can also access paid services like Printing and Copying.
+
+**Independence Library**
+Located at 18 South 7th Street, Philadelphia, PA 19106
+Phone: (215) 685-1633
+Status: Open
+Operating Hours: Monday and Tuesday: 11:00 AM - 7:00 PM, Wednesday to Friday: 10:00 AM - 5:00 PM
+Services: This library offers free services like Public Computers, Wi-Fi, and a Chinese-language Collection. You can also access paid services like Printing and Copying.
+
+**Philadelphia City Institute**
+Located at 1905 Locust Street, Philadelphia, PA 19103
+Phone: (215) 685-6621
+Status: Open
+Operating Hours: Monday and Tuesday: 10:00 AM - 6:00 PM, Wednesday to Friday: 10:00 AM - 5:00 PM
+Services: This library offers free services like Wi-Fi and Public Computers. You can also access paid services like Printing and Copying.
+
+**The Rosenbach**
+Located at 2008-2010 Delancey Place, Philadelphia, PA 19103
+Phone: (215) 732-1600
+Status: Open
+Operating Hours: Monday to Saturday: 11:00 AM - 7:00 PM (Wednesday to Friday: 10:00 AM - 5:00 PM)
+Services: The Rosenbach is a museum and research library that offers free tours, exhibitions, and reading courses. However, please note that admission fees may apply for some services.
+
+I hope this helps you find a library around City Hall that suits your needs!
+2025-07-24 14:36:12,655 - Neo4jApp - INFO - --- Finished Processing Streamlit Request for: 'libraries around City Hall' --- 
+
