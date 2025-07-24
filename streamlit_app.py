@@ -267,11 +267,23 @@ if app:
                                 )
                                 tooltip = {"html": "<b>{name}</b><br/>{address}", "style": {"color": "white"}}
                                 
-                                # Use a standard road map style
+                                # Free map style options (choose one):
+                                # Option 1: Default road style (similar to Google Maps)
+                                # map_style = 'road'
+                                
+                                # Option 2: Light theme (clean, minimal)
+                                # map_style = 'light' 
+                                
+                                # Option 3: Dark theme (good for data visualization)
+                                # map_style = 'dark'
+                                
+                                # Option 4: No background map (just pins)
+                                map_style = None
+                                
                                 map_deck = pdk.Deck(
                                     layers=[layer], 
                                     initial_view_state=view_state, 
-                                    map_style='mapbox://styles/mapbox/streets-v11',
+                                    map_style=map_style,
                                     tooltip=tooltip
                                 )
                             elif successful_geocodes == 0:
