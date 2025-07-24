@@ -1,12 +1,14 @@
 import streamlit as st
 from app import Neo4jApp # Import the main application class
+import base64
+from pathlib import Path
 import time
 
 # --- 1. Page Configuration ---
 # Sets the title, icon, and layout for the web app. This should be the first Streamlit command.
 st.set_page_config(
     page_title="DreamKG",
-    page_icon="🕸",
+    page_icon="/Users/javad/Documents/MEGA/Temple University/Lab/KG/logo.png",
     layout="centered",
 )
 
@@ -30,7 +32,36 @@ def init_app():
 app = init_app()
 
 # --- 3. User Interface ---
-st.title("🕸 DreamKG")
+# --- Function to load and encode the image ---
+@st.cache_data
+def get_img_as_base64(file):
+    if not Path(file).is_file():
+        return None
+    with open(file, "rb") as f:
+        data = f.read()
+    return base64.b64encode(data).decode()
+
+# --- Load the image ---
+img = get_img_as_base64("/Users/javad/Documents/MEGA/Workspace/VisualStudio/DreamKG/logo.png")
+
+# --- Custom Title using a single HTML block ---
+if img:
+    # We now use 'gap' on the container to create space, and remove all margins from the h1.
+    # The 'align-items: center;' property will now perfectly center both items vertically.
+    st.markdown(f"""
+        <div style="display: flex; align-items: center; gap: 15px;">
+            <img src="data:image/png;base64,{img}" width="60">
+            <h1 style="margin: 0;">DreamKG</h1>
+        </div>
+        """,
+        unsafe_allow_html=True
+    )
+
+# Add a horizontal line to separate the title from the rest of the content
+st.markdown("---")
+
+# The rest of your app's code follows...
+# st.markdown("Welcome! Ask a question...")
 st.markdown("""
 Welcome! Ask a question about services.
 
