@@ -106,7 +106,7 @@ def main():
     try:
         finder = KeywordSynonymFinder()
         # The path to your keywords file.
-        keyword_file_path = "DreamKG/keywords.txt"
+        keyword_file_path = "keywords.txt"
         keywords = finder.read_keywords(keyword_file_path)
 
         if not keywords:

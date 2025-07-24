@@ -105,7 +105,7 @@ class AddressFinder:
 
     def run(self):
         """Main loop to run the standalone address finder application."""
-        address_file_path = "DreamKG/keywords.txt"
+        address_file_path = "keywords.txt"
         
         print("\nWelcome to the Address Finder! 🗺️")
         print("I will find addresses from your list that are in the same or adjacent ZIP codes, AND any addresses that contain your search term.")

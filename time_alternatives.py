@@ -7,7 +7,7 @@ class TimeMatcher:
     """
     A class to find matching times from a file using an LLM.
     """
-    def __init__(self, times_file_path='DreamKG/keywords.txt'):
+    def __init__(self, times_file_path='keywords.txt'):
         """
         Initializes the TimeMatcher by loading the API key, setting up the Groq client,
         and reading the specified times file.
