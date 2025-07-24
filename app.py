@@ -145,7 +145,7 @@ class Neo4jApp:
             * If the user asks for a free service but the data shows its `"type": "Paid"`, you MUST explicitly state that the service is paid. This is the most important rule.
         3.  **Handle Mismatches Intelligently**: If you cannot find a perfect match for the user's request, offer the closest alternative found in the data.
             * **Example**: If the user asks for "free printing" and you only find "paid printing" and "free Wi-Fi", you should say: "While I couldn't find free printing, the Wadsworth Library at 1500 Wadsworth Avenue does offer paid printing services. They also provide other free services like Wi-Fi and public computer access."
-        4.  **Synthesize, Don't Just List**: Create a coherent, natural-language paragraph. Group information for the same organization logically.
+        4.  **Synthesize, Don't Just List**: Create a coherent, natural-language list. Group information for the same organization logically.
         5.  **Avoid Technical Jargon**: Do not use words like "JSON", "nodes", "records", or "database".
 
         Now, generate the polished and factually accurate response for the provided results based on these strict instructions.
@@ -172,7 +172,7 @@ class Neo4jApp:
             return polished_text
         except Exception as e:
             self.logger.error(f"Error calling Groq API for polishing: {e}")
-            return "I found some results, but I had trouble summarizing them for you."
+            return "Please make your request more specific!"
 
     def process_user_request(self, user_query: str):
         """
