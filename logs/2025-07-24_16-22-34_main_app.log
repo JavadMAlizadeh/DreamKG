@@ -1,0 +1,196 @@
+2025-07-24 16:22:34,677 - Neo4jApp - INFO - Initializing Neo4j Application...
+2025-07-24 16:22:34,729 - Neo4jApp - INFO - Groq client initialized successfully.
+2025-07-24 16:22:34,729 - Neo4jApp - INFO - Looking for keywords file at: keywords.txt
+2025-07-24 16:22:34,774 - Neo4jApp - INFO - QueryProcessor initialized successfully.
+2025-07-24 16:22:35,360 - Neo4jApp - INFO - Neo4j driver initialized and connection verified. 
+
+2025-07-24 16:22:40,659 - Neo4jApp - INFO - ================== New Streamlit Request: 'English Conversation Groups' ==================
+
+2025-07-24 16:22:41,011 - Neo4jApp - INFO - INPUT to Neo4j Executor (Cypher Query):
+
+MATCH (org:Organization)
+
+// To use a filter, remove the '//' from the start of the line and edit the value.
+WHERE 1=1 // This dummy condition lets you safely uncomment any AND line below.
+
+  // -- Filters on Organization Properties --
+  // AND toLower(TRIM(replace(org.name, '\u00A0', ' '))) CONTAINS toLower('YOUR_NAME_HERE')
+  // AND toLower(TRIM(replace(org.phone, '\u00A0', ' '))) CONTAINS toLower('YOUR_PHONE_HERE')
+  // AND toLower(TRIM(replace(org.status, '\u00A0', ' '))) CONTAINS toLower('YOUR_STATUS_HERE')
+
+  // -- Filters on Location Properties --
+  // AND EXISTS{(org)-[:HAS_LOCATION]->(l:Location WHERE YOUR_LOCATION_CONDITION_HERE)}
+
+  // -- Filters on Service Properties --
+  AND EXISTS{(org)-[:PROVIDES]->(s:Service WHERE toLower(TRIM(s.name)) CONTAINS toLower('english conversation groups'))}
+  // AND EXISTS{(org)-[:PROVIDES]->(s:Service WHERE toLower(TRIM(s.type)) CONTAINS toLower('YOUR_SERVICE_TYPE_HERE'))}
+
+  // -- Filters on Time Properties --
+  // AND EXISTS{(org)-[:HAS_HOURS]->(t:Time WHERE toLower(TRIM(t.day)) CONTAINS toLower('YOUR_TIME_DAY_HERE'))}
+  // AND EXISTS{(org)-[:HAS_HOURS]->(t:Time WHERE toLower(TRIM(t.hours)) CONTAINS toLower('YOUR_TIME_HOURS_HERE'))}
+
+// The RETURN clause remains the same to prevent data repetition.
+RETURN org,
+       [(org)-[:HAS_LOCATION]->(loc) | loc] AS locations,
+       [(org)-[:PROVIDES]->(svc) | svc] AS services,
+       [(org)-[:HAS_HOURS]->(tm) | tm] AS operatingHours
+
+2025-07-24 16:22:41,171 - Neo4jApp - INFO - OUTPUT from Neo4j Executor (1 records found in 0.16s):
+[
+  {
+    "org": {
+      "phone": "(215) 685-9996",
+      "name": "Kensington Library",
+      "status": "Open"
+    },
+    "locations": [
+      {
+        "zipCode": "19133",
+        "streetAddress": "104 West Dauphin Street",
+        "city": "Philadelphia",
+        "state": "PA"
+      }
+    ],
+    "services": [
+      {
+        "name": "Printing",
+        "type": "Paid"
+      },
+      {
+        "name": "Copying",
+        "type": "Paid"
+      },
+      {
+        "name": "Public Computers",
+        "type": "Free"
+      },
+      {
+        "name": "Wi-Fi",
+        "type": "Free"
+      },
+      {
+        "name": "Story Times",
+        "type": "Free"
+      },
+      {
+        "name": "STEM Workshops",
+        "type": "Free"
+      },
+      {
+        "name": "English Conversation Groups.",
+        "type": "Free"
+      }
+    ],
+    "operatingHours": [
+      {
+        "hours": "10:00 AM - 5:00 PM",
+        "day": "Wednesday"
+      },
+      {
+        "hours": "10:00 AM - 5:00 PM",
+        "day": "Thursday"
+      },
+      {
+        "hours": "10:00 AM - 5:00 PM",
+        "day": "Friday"
+      },
+      {
+        "hours": "10:00 AM - 5:00 PM",
+        "day": "Saturday"
+      },
+      {
+        "hours": "10:00 AM - 6:00 PM",
+        "day": "Monday"
+      },
+      {
+        "hours": "10:00 AM - 6:00 PM",
+        "day": "Tuesday"
+      }
+    ]
+  }
+]
+2025-07-24 16:22:41,172 - Neo4jApp - INFO - INPUT to Polishing LLM (Original Query): 'English Conversation Groups'
+2025-07-24 16:22:41,172 - Neo4jApp - INFO - INPUT to Polishing LLM (Neo4j Results):
+[
+  {
+    "org": {
+      "phone": "(215) 685-9996",
+      "name": "Kensington Library",
+      "status": "Open"
+    },
+    "locations": [
+      {
+        "zipCode": "19133",
+        "streetAddress": "104 West Dauphin Street",
+        "city": "Philadelphia",
+        "state": "PA"
+      }
+    ],
+    "services": [
+      {
+        "name": "Printing",
+        "type": "Paid"
+      },
+      {
+        "name": "Copying",
+        "type": "Paid"
+      },
+      {
+        "name": "Public Computers",
+        "type": "Free"
+      },
+      {
+        "name": "Wi-Fi",
+        "type": "Free"
+      },
+      {
+        "name": "Story Times",
+        "type": "Free"
+      },
+      {
+        "name": "STEM Workshops",
+        "type": "Free"
+      },
+      {
+        "name": "English Conversation Groups.",
+        "type": "Free"
+      }
+    ],
+    "operatingHours": [
+      {
+        "hours": "10:00 AM - 5:00 PM",
+        "day": "Wednesday"
+      },
+      {
+        "hours": "10:00 AM - 5:00 PM",
+        "day": "Thursday"
+      },
+      {
+        "hours": "10:00 AM - 5:00 PM",
+        "day": "Friday"
+      },
+      {
+        "hours": "10:00 AM - 5:00 PM",
+        "day": "Saturday"
+      },
+      {
+        "hours": "10:00 AM - 6:00 PM",
+        "day": "Monday"
+      },
+      {
+        "hours": "10:00 AM - 6:00 PM",
+        "day": "Tuesday"
+      }
+    ]
+  }
+]
+2025-07-24 16:22:42,015 - Neo4jApp - INFO - OUTPUT from Polishing LLM (took 0.84s | Prompt: 819, Completion: 144, Total: 963 tokens):
+Here is the polished and factually accurate response:
+
+The Kensington Library, located at 104 West Dauphin Street, Philadelphia, PA 19133, offers English Conversation Groups as a free service. This library is open and can be reached by phone at (215) 685-9996. 
+
+In addition to the English Conversation Groups, the library provides other free services, including Public Computers, Wi-Fi, Story Times, and STEM Workshops. They also offer paid services, such as Printing and Copying.
+
+The library's operating hours are Monday and Tuesday from 10:00 AM to 6:00 PM, and Wednesday to Saturday from 10:00 AM to 5:00 PM.
+2025-07-24 16:22:42,015 - Neo4jApp - INFO - --- Finished Processing Streamlit Request for: 'English Conversation Groups' --- 
+
