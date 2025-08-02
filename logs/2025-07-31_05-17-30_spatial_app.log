@@ -1,0 +1,56 @@
+2025-07-31 05:17:31,265 - INFO - Spatial index already exists
+2025-07-31 05:17:55,521 - INFO - Processing query: a library with free wifi near temple university on monday?
+2025-07-31 05:17:55,522 - INFO - Geocoding location: Temple University, Philadelphia, PA
+2025-07-31 05:17:55,909 - INFO - Successfully geocoded Temple University, Philadelphia, PA to (39.981188, -75.1562828)
+2025-07-31 05:18:00,329 - INFO - HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
+2025-07-31 05:18:00,338 - INFO - Generated Cypher Query:
+```cypher
+// Find libraries with free wifi near Temple University, open on Monday
+MATCH (o:Organization)-[:LOCATED_AT]->(l:Location)
+WHERE 
+  o.name CONTAINS "library"
+  AND o.status = "open"
+  AND distance(
+        point({latitude: 39.981188, longitude: -75.1562828}),
+        point({latitude: l.latitude, longitude: l.longitude})
+      ) <= 3218.68 // 2 miles in meters
+WITH o, l, 
+     distance(
+       point({latitude: 39.981188, longitude: -75.1562828}),
+       point({latitude: l.latitude, longitude: l.longitude})
+     ) / 1609.34 AS distance_miles
+OPTIONAL MATCH (o)-[:HAS_HOURS]->(t:Time)
+OPTIONAL MATCH (o)-[r:OFFERS]->(s:Service)
+WHERE s.name CONTAINS "wifi" AND r.type CONTAINS "free"
+WITH o, l, distance_miles, t, COLLECT({service: s.name, type: r.type}) AS services
+WHERE t.monday IS NOT NULL AND t.monday <> ""
+RETURN
+  o.name AS organization,
+  o.phone AS phone,
+  o.status AS status,
+  l.street AS street,
+  l.city AS city,
+  l.state AS state,
+  l.zipcode AS zipcode,
+  distance_miles,
+  t.monday AS monday_hours,
+  t.tuesday AS tuesday_hours,
+  t.wednesday AS wednesday_hours,
+  t.thursday AS thursday_hours,
+  t.friday AS friday_hours,
+  t.saturday AS saturday_hours,
+  t.sunday AS sunday_hours,
+  services
+ORDER BY distance_miles ASC
+LIMIT 10
+```
+**Explanation:**
+- Filters for organizations with "library" in the name, open status, and within 2 miles of Temple University.
+- Ensures the organization offers a service with "wifi" in the name and "free" in the type.
+- Checks that the library is open on Monday.
+- Returns all relevant details, including calculated distance in miles, hours, and services.
+- Results are ordered by proximity (closest first).
+2025-07-31 05:18:00,351 - ERROR - Query execution failed: {code: Neo.ClientError.Statement.SyntaxError} {message: Invalid input '```cypher\n// Find libraries with free wifi near Temple University, open on Monday\nMATCH (o:Organization)-[:LOCATED_AT]->(l:Location)\nWHERE \n  o.name CONTAINS "library"\n  AND o.status = "open"\n  AND distance(\n        point({latitude: 39.981188, longitude: -75.1562828}),\n        point({latitude: l.latitude, longitude: l.longitude})\n      ) <= 3218.68 // 2 miles in meters\nWITH o, l, \n     distance(\n       point({latitude: 39.981188, longitude: -75.1562828}),\n       point({latitude: l.latitude, longitude: l.longitude})\n     ) / 1609.34 AS distance_miles\nOPTIONAL MATCH (o)-[:HAS_HOURS]->(t:Time)\nOPTIONAL MATCH (o)-[r:OFFERS]->(s:Service)\nWHERE s.name CONTAINS "wifi" AND r.type CONTAINS "free"\nWITH o, l, distance_miles, t, COLLECT({service: s.name, type: r.type}) AS services\nWHERE t.monday IS NOT NULL AND t.monday <> ""\nRETURN\n  o.name AS organization,\n  o.phone AS phone,\n  o.status AS status,\n  l.street AS street,\n  l.city AS city,\n  l.state AS state,\n  l.zipcode AS zipcode,\n  distance_miles,\n  t.monday AS monday_hours,\n  t.tuesday AS tuesday_hours,\n  t.wednesday AS wednesday_hours,\n  t.thursday AS thursday_hours,\n  t.friday AS friday_hours,\n  t.saturday AS saturday_hours,\n  t.sunday AS sunday_hours,\n  services\nORDER BY distance_miles ASC\nLIMIT 10\n```': expected 'ALTER', 'ORDER BY', 'CALL', 'USING PERIODIC COMMIT', 'CREATE', 'LOAD CSV', 'START DATABASE', 'STOP DATABASE', 'DEALLOCATE', 'DELETE', 'DENY', 'DETACH', 'DROP', 'DRYRUN', 'FINISH', 'FOREACH', 'GRANT', 'INSERT', 'LIMIT', 'MATCH', 'MERGE', 'NODETACH', 'OFFSET', 'OPTIONAL', 'REALLOCATE', 'REMOVE', 'RENAME', 'RETURN', 'REVOKE', 'ENABLE SERVER', 'SET', 'SHOW', 'SKIP', 'TERMINATE', 'UNWIND', 'USE' or 'WITH' (line 1, column 1 (offset: 0))
+"```cypher"
+ ^}
+2025-07-31 05:18:28,778 - WARNING - Application terminated by user (KeyboardInterrupt).
