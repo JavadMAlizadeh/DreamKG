@@ -89,7 +89,7 @@ if img:
 st.markdown("---")
 
 st.markdown("""
-Welcome! Ask a question about services.
+Welcome! Ask a question about free public libraries of Philadelphia.
 
 **For example:**
 * Where can I find free Wi-Fi in zipcode 19121?
