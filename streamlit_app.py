@@ -881,10 +881,10 @@ Welcome! Ask a question about **Food Banks**, **Mental Health Centers**, **Shelt
 * Your session activity will be securely logged and transmitted to our servers to support monitoring and service improvements.
 """, unsafe_allow_html=True)
 
+st.markdown("---")
+
 # Request user location after the welcome message to avoid any spacing issues
 get_user_location()
-
-st.markdown("---")
 
 # --- Application Initialization ---
 @st.cache_resource
