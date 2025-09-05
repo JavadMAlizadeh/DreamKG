@@ -59,36 +59,131 @@ class OrganizationInfoApp:
         logging.info("OrganizationInfoApp initialized with enhanced metrics tracking and Google Sheets logging")
     
     def log_session_to_sheets(self):
-        """Log the current session data to Google Sheets."""
+        """Log the current session data to Google Sheets with enhanced debugging."""
         if self.sheets_logger and self.sheets_logger.initialized:
             try:
+                logging.info("="*50)
+                logging.info("STARTING GOOGLE SHEETS LOGGING PROCESS")
+                
                 # Get current metrics data
                 metrics_data = self.metrics.get_statistics()
+                logging.info(f"Retrieved metrics data: {len(str(metrics_data))} characters")
+                
+                # Debug: Check log file before sending
+                logging.info(f"Log filename to send: {self.log_filename}")
+                
+                if os.path.exists(self.log_filename):
+                    file_size = os.path.getsize(self.log_filename)
+                    logging.info(f"Log file exists. Size: {file_size} bytes")
+                    
+                    # Read a preview of the log file to ensure it has content
+                    try:
+                        with open(self.log_filename, 'r', encoding='utf-8') as f:
+                            preview = f.read(500)  # First 500 characters
+                        logging.info(f"Log file preview (first 500 chars): {repr(preview)}")
+                    except Exception as e:
+                        logging.error(f"Could not read log file preview: {str(e)}")
+                else:
+                    logging.error(f"Log file does not exist at path: {self.log_filename}")
+                    # List directory contents for debugging
+                    log_dir = os.path.dirname(self.log_filename)
+                    if os.path.exists(log_dir):
+                        contents = os.listdir(log_dir)
+                        logging.info(f"Contents of {log_dir}: {contents}")
+                    else:
+                        logging.error(f"Log directory does not exist: {log_dir}")
+                    return
                 
                 # Log to Google Sheets
+                logging.info("Calling sheets_logger.log_session_data()")
                 self.sheets_logger.log_session_data(self.log_filename, metrics_data)
+                logging.info("sheets_logger.log_session_data() completed")
+                
                 logging.info("Session data logged to Google Sheets successfully")
+                logging.info("="*50)
                 
             except Exception as e:
                 logging.error(f"Failed to log session to Google Sheets: {str(e)}")
+                logging.error(f"Error type: {type(e).__name__}")
+                import traceback
+                logging.error(f"Full traceback: {traceback.format_exc()}")
         else:
-            logging.warning("Google Sheets logger not available, skipping session log")
+            if not self.sheets_logger:
+                logging.warning("Google Sheets logger is None, skipping session log")
+            elif not self.sheets_logger.initialized:
+                logging.warning("Google Sheets logger not initialized, skipping session log")
+            else:
+                logging.warning("Google Sheets logger not available for unknown reason")
+
 
     def get_log_filename(self):
-        """Get the current log filename."""
+        """Get the current log filename with validation."""
+        logging.info(f"Current log filename: {self.log_filename}")
+        if os.path.exists(self.log_filename):
+            size = os.path.getsize(self.log_filename)
+            logging.info(f"Log file exists and is {size} bytes")
+        else:
+            logging.warning(f"Log file does not exist: {self.log_filename}")
         return self.log_filename
 
     def read_log_file(self):
-        """Read the current log file content."""
+        """Read the current log file content with enhanced debugging."""
         try:
-            import os
-            if os.path.exists(self.log_filename):
-                with open(self.log_filename, 'r', encoding='utf-8') as f:
-                    return f.read()
-            else:
-                return "Log file not found."
+            logging.info(f"Attempting to read log file: {self.log_filename}")
+            
+            if not os.path.exists(self.log_filename):
+                error_msg = f"Log file not found: {self.log_filename}"
+                logging.error(error_msg)
+                return error_msg
+            
+            file_size = os.path.getsize(self.log_filename)
+            logging.info(f"Log file size: {file_size} bytes")
+            
+            if file_size == 0:
+                warning_msg = "Log file exists but is empty"
+                logging.warning(warning_msg)
+                return warning_msg
+            
+            with open(self.log_filename, 'r', encoding='utf-8') as f:
+                content = f.read()
+            
+            logging.info(f"Successfully read log file. Content length: {len(content)} characters")
+            
+            # Log first and last few lines for debugging
+            lines = content.split('\n')
+            logging.info(f"Log file has {len(lines)} lines")
+            if len(lines) > 0:
+                logging.info(f"First line: {repr(lines[0])}")
+                if len(lines) > 1:
+                    logging.info(f"Last line: {repr(lines[-1])}")
+            
+            return content
+            
         except Exception as e:
-            return f"Error reading log file: {str(e)}"
+            error_msg = f"Error reading log file: {str(e)}"
+            logging.error(error_msg)
+            return error_msg
+        
+    # Also add this method to test the sheets connection
+    def test_sheets_connection(self):
+        """Test the Google Sheets connection and log results."""
+        if self.sheets_logger:
+            try:
+                logging.info("Testing Google Sheets connection...")
+                result = self.sheets_logger.test_connection()
+                logging.info(f"Google Sheets connection test result: {result}")
+                
+                # Get worksheet info for debugging
+                info = self.sheets_logger.get_worksheet_info()
+                logging.info(f"Worksheet info: {info}")
+                
+                return result
+            except Exception as e:
+                logging.error(f"Error testing sheets connection: {str(e)}")
+                return False
+        else:
+            logging.error("No sheets logger available for connection test")
+            return False
     
     def _is_personal_location_query(self, user_query):
         """
