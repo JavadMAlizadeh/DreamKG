@@ -1,0 +1,22 @@
+# Secrets and credentials
+dreamkg-b5d66f97fe0c.json
+.streamlit/secrets.toml
+.env
+
+# Logs
+logs/
+*.log
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+.pytest_cache/
+
+# IDE
+.vscode/
+.idea/
+
+# OS
+.DS_Store
+Thumbs.db

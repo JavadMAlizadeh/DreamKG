@@ -1,6 +1,0 @@
-2025-07-24 11:35:15,959 - Neo4jApp - INFO - Initializing Neo4j Application...
-2025-07-24 11:35:15,994 - Neo4jApp - INFO - Groq client initialized successfully.
-2025-07-24 11:35:15,994 - Neo4jApp - INFO - Looking for keywords file at: /Users/javad/Documents/MEGA/Workspace/VisualStudio/DreamKG/keywords.txt
-2025-07-24 11:35:16,037 - Neo4jApp - INFO - QueryProcessor initialized successfully.
-2025-07-24 11:35:30,377 - Neo4jApp - INFO - Neo4j driver initialized and connection verified. 
-
