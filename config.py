@@ -80,6 +80,10 @@ class Config:
     @classmethod
     def setup_logging(cls):
         """Setup logging configuration with timestamp-based filename."""
+        # Create logs directory if it doesn't exist
+        import os
+        os.makedirs(cls.LOG_DIRECTORY, exist_ok=True)
+        
         log_filename = datetime.now().strftime(f"{cls.LOG_DIRECTORY}%Y-%m-%d_%H-%M-%S_app.log")
         
         logging.basicConfig(
