@@ -1,11 +1,11 @@
+# ==============================================================================
+# UPDATED config.py - Add Google Maps API Key
+# ==============================================================================
+
 import os
 import logging
 from datetime import datetime
 import streamlit as st
-
-# ==============================================================================
-# Environment Variables
-# ==============================================================================
 
 # Load from Streamlit secrets
 os.environ["NEO4J_URI"] = st.secrets["NEO4J_URI"]
@@ -25,6 +25,9 @@ class Config:
     LLM_MODEL = "meta-llama/llama-4-maverick-17b-128e-instruct"
     LLM_TEMPERATURE = 2
 
+    # Google Maps Configuration - ADD THIS
+    GOOGLE_MAPS_API_KEY = st.secrets.get("GOOGLE_MAPS_API_KEY", None)
+
     # Google Sheets Configuration
     GOOGLE_SHEET_NAME = "DreamKGLogs"
     GOOGLE_WORKSHEET_NAME = "Session_Logs" 
@@ -34,7 +37,7 @@ class Config:
     
     # Spatial Intelligence Configuration
     GEOCODING_TIMEOUT = 10
-    DEFAULT_DISTANCE_THRESHOLD =  0.8 # miles
+    DEFAULT_DISTANCE_THRESHOLD = 0.8 # miles
     EXPANDED_DISTANCE_THRESHOLD = 1.25  # miles
     
     # Proximity thresholds in miles
@@ -80,7 +83,6 @@ class Config:
     @classmethod
     def setup_logging(cls):
         """Setup logging configuration with timestamp-based filename."""
-        # Create logs directory if it doesn't exist
         import os
         os.makedirs(cls.LOG_DIRECTORY, exist_ok=True)
         
@@ -101,7 +103,7 @@ class Config:
         """Validate that all required configuration is present."""
         required_vars = [
             ('NEO4J_PASSWORD', cls.NEO4J_PASSWORD),
-            ('GROQ_API_KEY', cls.GROQ_API_KEY)
+            ('GROQ_API_KEY', cls.GROQ_API_KEY),
         ]
         
         missing_vars = []
