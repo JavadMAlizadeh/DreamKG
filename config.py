@@ -101,8 +101,7 @@ class Config:
         """Validate that all required configuration is present."""
         required_vars = [
             ('NEO4J_PASSWORD', cls.NEO4J_PASSWORD),
-            ('GROQ_API_KEY', cls.GROQ_API_KEY),
-            ('GOOGLE_CREDENTIALS_PATH', cls.GOOGLE_CREDENTIALS_PATH)
+            ('GROQ_API_KEY', cls.GROQ_API_KEY)
         ]
         
         missing_vars = []
