@@ -153,3 +153,29 @@ class Config:
         logging.root.handlers = [file_handler]
         
         return log_filename
+    
+    @classmethod
+    def setup_logging_with_session_id(cls, session_id):
+        """Setup logging with guaranteed unique filename per session."""
+        import os
+        import uuid
+        from datetime import datetime
+        
+        os.makedirs(cls.LOG_DIRECTORY, exist_ok=True)
+        
+        # Use session ID + timestamp + random component for absolute uniqueness
+        timestamp = datetime.now().strftime("%Y-%m-%d_%H-%M-%S-%f")[:-3]
+        random_component = str(uuid.uuid4())[:8]
+        log_filename = f"{cls.LOG_DIRECTORY}{timestamp}_{session_id[:8]}_{random_component}_app.log"
+        
+        # Configure logging for this session
+        logging.basicConfig(
+            level=cls.LOG_LEVEL,
+            format=cls.LOG_FORMAT,
+            handlers=[
+                logging.FileHandler(log_filename)
+            ],
+            force=True  # Override any existing configuration
+        )
+        
+        return log_filename

@@ -20,27 +20,21 @@ from services.response_service import ResponseService
 from services.google_sheets_logger import GoogleSheetsLogger
 
 class OrganizationInfoApp:
-    """
-    Main application class with enhanced metrics tracking for all operations.
-    Provides detailed insights into token usage, latency breakdowns, and processing times.
-    """
-    
-    def __init__(self):
-        """Initialize the application with enhanced metrics tracking."""
-        def __init__(self, session_id=None):
+    def __init__(self, session_id=None):
+        """Initialize the application with session isolation."""
         # Generate unique session ID if not provided
-            if session_id is None:
-                import uuid
-                session_id = str(uuid.uuid4())
-            
-            self.session_id = session_id
-            
-            # Setup logging with unique session ID
-            self.log_filename = Config.setup_logging_with_session_id(session_id)
-            Config.validate_config()
-            
-            # Initialize metrics with unique session ID
-            self.metrics = MetricsCollector(session_id=session_id)
+        if session_id is None:
+            import uuid
+            session_id = str(uuid.uuid4())
+        
+        self.session_id = session_id
+        
+        # Setup logging with unique session ID - call the NEW method
+        self.log_filename = Config.setup_logging_with_session_id(session_id)
+        Config.validate_config()
+        
+        # Initialize enhanced metrics collector with session ID
+        self.metrics = MetricsCollector(session_id=session_id)
 
         # Initialize Google Sheets logger
         try:
@@ -60,11 +54,11 @@ class OrganizationInfoApp:
             self.neo4j_client, 
             self.spatial_intel, 
             self.memory,
-            self.metrics  # Pass enhanced metrics collector to query service
+            self.metrics
         )
         self.response_service = ResponseService()
         
-        logging.info("OrganizationInfoApp initialized with enhanced metrics tracking and Google Sheets logging")
+        logging.info(f"OrganizationInfoApp initialized for session: {self.session_id}")
     
     def log_session_to_sheets(self):
         """Log the current session data to Google Sheets with enhanced debugging."""
@@ -910,7 +904,6 @@ st.markdown("---")
 get_user_location()
 
 # --- Application Initialization ---
-@st.cache_resource
 def get_session_app():
     """Get or create app instance for current session."""
     # Use Streamlit's session_state to store per-user app instances
@@ -919,8 +912,13 @@ def get_session_app():
         import uuid
         session_id = str(uuid.uuid4())
         st.session_state.session_id = session_id
-        st.session_state.app_instance = OrganizationInfoApp(session_id=session_id)
-        logging.info(f"Created new app instance for session: {session_id}")
+        
+        try:
+            st.session_state.app_instance = OrganizationInfoApp(session_id=session_id)
+            logging.info(f"Created new app instance for session: {session_id[:8]}...")
+        except Exception as e:
+            st.error(f"Failed to initialize app: {str(e)}")
+            return None
     
     return st.session_state.app_instance
 
