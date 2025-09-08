@@ -82,11 +82,14 @@ class Config:
     
     @classmethod
     def setup_logging(cls):
-        """Setup logging configuration with timestamp-based filename."""
         import os
+        import uuid
         os.makedirs(cls.LOG_DIRECTORY, exist_ok=True)
         
-        log_filename = datetime.now().strftime(f"{cls.LOG_DIRECTORY}%Y-%m-%d_%H-%M-%S_app.log")
+        # Use UUID + timestamp for guaranteed uniqueness
+        unique_id = str(uuid.uuid4())[:8]
+        timestamp = datetime.now().strftime("%Y-%m-%d_%H-%M-%S-%f")[:-3]  # Include microseconds
+        log_filename = f"{cls.LOG_DIRECTORY}{timestamp}_{unique_id}_app.log"
         
         logging.basicConfig(
             level=cls.LOG_LEVEL,
