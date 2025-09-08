@@ -1,7 +1,3 @@
-"""
-Enhanced Metrics Collector module for the Neo4j Organization Information System.
-Tracks comprehensive statistics about queries, performance, usage patterns, and detailed token/latency metrics.
-"""
 
 import logging
 import time
@@ -10,6 +6,8 @@ from collections import defaultdict, Counter
 from dataclasses import dataclass, field
 from typing import Dict, List, Optional, Any
 import json
+import uuid
+import time
 
 
 @dataclass
@@ -121,7 +119,7 @@ class MetricsCollector:
         Args:
             session_id (str): Unique session identifier
         """
-        self.session_id = session_id or f"session_{int(time.time())}"
+        self.session_id = session_id or f"session_{int(time.time() * 1000)}_{str(uuid.uuid4())[:8]}"
         self.session_start = datetime.now()
         self.query_history: List[QueryMetrics] = []
         self.stats = SessionStats()

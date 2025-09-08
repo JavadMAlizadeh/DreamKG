@@ -87,8 +87,8 @@ class Config:
         os.makedirs(cls.LOG_DIRECTORY, exist_ok=True)
         
         # Use UUID + timestamp for guaranteed uniqueness
-        unique_id = str(uuid.uuid4())[:8]
         timestamp = datetime.now().strftime("%Y-%m-%d_%H-%M-%S-%f")[:-3]  # Include microseconds
+        unique_id = str(uuid.uuid4())[:8]
         log_filename = f"{cls.LOG_DIRECTORY}{timestamp}_{unique_id}_app.log"
         
         logging.basicConfig(
