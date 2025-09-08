@@ -118,3 +118,38 @@ class Config:
             raise ValueError(f"Missing required environment variables: {', '.join(missing_vars)}")
         
         return True
+    
+    @classmethod
+    def setup_logging_with_session_id(cls, session_id):
+        """Setup logging with guaranteed unique filename per session."""
+        import os
+        import uuid
+        from datetime import datetime
+        
+        os.makedirs(cls.LOG_DIRECTORY, exist_ok=True)
+        
+        # Use session ID + timestamp + random component for absolute uniqueness
+        timestamp = datetime.now().strftime("%Y-%m-%d_%H-%M-%S-%f")[:-3]
+        random_component = str(uuid.uuid4())[:8]
+        log_filename = f"{cls.LOG_DIRECTORY}{timestamp}_{session_id}_{random_component}_app.log"
+        
+        # Create unique logger for this session
+        logger_name = f"app_logger_{session_id}"
+        logger = logging.getLogger(logger_name)
+        
+        # Clear any existing handlers
+        logger.handlers.clear()
+        
+        # Create file handler for this session
+        file_handler = logging.FileHandler(log_filename)
+        file_handler.setLevel(cls.LOG_LEVEL)
+        formatter = logging.Formatter(cls.LOG_FORMAT)
+        file_handler.setFormatter(formatter)
+        
+        logger.addHandler(file_handler)
+        logger.setLevel(cls.LOG_LEVEL)
+        
+        # Set as root logger for this session
+        logging.root.handlers = [file_handler]
+        
+        return log_filename

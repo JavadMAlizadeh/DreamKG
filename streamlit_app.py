@@ -27,12 +27,20 @@ class OrganizationInfoApp:
     
     def __init__(self):
         """Initialize the application with enhanced metrics tracking."""
-        # Setup logging and validate configuration
-        self.log_filename = Config.setup_logging()
-        Config.validate_config()
-        
-        # Initialize enhanced metrics collector first
-        self.metrics = MetricsCollector()
+        def __init__(self, session_id=None):
+        # Generate unique session ID if not provided
+            if session_id is None:
+                import uuid
+                session_id = str(uuid.uuid4())
+            
+            self.session_id = session_id
+            
+            # Setup logging with unique session ID
+            self.log_filename = Config.setup_logging_with_session_id(session_id)
+            Config.validate_config()
+            
+            # Initialize metrics with unique session ID
+            self.metrics = MetricsCollector(session_id=session_id)
 
         # Initialize Google Sheets logger
         try:
@@ -903,16 +911,20 @@ get_user_location()
 
 # --- Application Initialization ---
 @st.cache_resource
-def init_app():
-    """Initializes the OrganizationInfoApp and returns the instance."""
-    try:
-        app_instance = OrganizationInfoApp()
-        return app_instance
-    except Exception as e:
-        st.error(f"Application failed to initialize. Please check your configurations. Error: {e}", icon="🚨")
-        return None
+def get_session_app():
+    """Get or create app instance for current session."""
+    # Use Streamlit's session_state to store per-user app instances
+    if 'app_instance' not in st.session_state:
+        # Create unique session ID for this user
+        import uuid
+        session_id = str(uuid.uuid4())
+        st.session_state.session_id = session_id
+        st.session_state.app_instance = OrganizationInfoApp(session_id=session_id)
+        logging.info(f"Created new app instance for session: {session_id}")
+    
+    return st.session_state.app_instance
 
-app = init_app()
+app = get_session_app()
 
 # --- Configuration for Directions ---
 DIRECTIONS_HEIGHT = 500  # Height for directions iframe
