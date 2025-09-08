@@ -605,13 +605,20 @@ class OrganizationInfoApp:
     def _format_results_with_performance_info(self, response_result, query_result):
         """
         Format results with enhanced performance information for Streamlit.
+        
+        Args:
+            response_result (dict): Response generation result
+            query_result (dict): Query processing result
+            
+        Returns:
+            str or dict: Formatted response content
         """
         logging.info(f"Final Answer:\n\n{response_result['response']}")
 
-        # Start with main response
+        # Get the main response
         content = response_result['response']
         
-        # Add helpful suggestions
+        # Add helpful suggestions only if we have results
         if query_result['results']:
             result_count = len(query_result['results'])
             suggestions = self.response_service.generate_suggestion_response(
@@ -624,7 +631,22 @@ class OrganizationInfoApp:
             )
             
             if suggestions:
-                content += f"\n\n{suggestions}"  # <-- ERROR OCCURS HERE
+                # BULLETPROOF: Handle any type of content safely
+                try:
+                    if isinstance(content, dict):
+                        # For structured responses, add suggestions as a separate field
+                        content['suggestions'] = suggestions
+                    elif isinstance(content, str):
+                        # For string responses, concatenate suggestions
+                        content += f"\n\n{suggestions}"
+                    else:
+                        # Fallback: convert to string and concatenate
+                        content = str(content) + f"\n\n{suggestions}"
+                except Exception as e:
+                    # Ultimate fallback: just return original content if anything fails
+                    logging.warning(f"Could not add suggestions due to error: {e}")
+                    # Return original content unchanged
+                    pass
         
         return content
     
