@@ -605,13 +605,6 @@ class OrganizationInfoApp:
     def _format_results_with_performance_info(self, response_result, query_result):
         """
         Format results with enhanced performance information for Streamlit.
-        
-        Args:
-            response_result (dict): Response generation result
-            query_result (dict): Query processing result
-            
-        Returns:
-            str: Formatted response content
         """
         logging.info(f"Final Answer:\n\n{response_result['response']}")
 
@@ -631,7 +624,7 @@ class OrganizationInfoApp:
             )
             
             if suggestions:
-                content += f"\n\n{suggestions}"
+                content += f"\n\n{suggestions}"  # <-- ERROR OCCURS HERE
         
         return content
     
