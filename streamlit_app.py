@@ -1292,7 +1292,7 @@ def geocode_address(address, org_name=None):
     """Converts an address string into latitude and longitude."""
     try:
         geolocator = Nominatim(user_agent="dream_kg_map_app_v2", timeout=10)
-        time.sleep(1.5)  # Increased delay to avoid rate limiting
+        time.sleep(2)  # Increased delay to avoid rate limiting
         
         # Try the full address first
         location = geolocator.geocode(address)
