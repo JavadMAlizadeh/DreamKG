@@ -22,7 +22,7 @@ class Config:
     
     # LLM Configuration
     GROQ_API_KEY = os.getenv("GROQ_API_KEY")
-    LLM_MODEL = "meta-llama/llama-4-maverick-17b-128e-instruct"
+    LLM_MODEL = "openai/gpt-oss-120b"
     LLM_TEMPERATURE = 2
 
     # Google Maps Configuration - ADD THIS
