@@ -836,12 +836,21 @@ def display_structured_response(response_data, raw_data=None, user_query="", app
                 col_checkbox, col_content = st.columns([0.35, 9.65])
                 
                 with col_checkbox:
+                    # FIXED: Check if user tried to uncheck the selected item in previous run
+                    # If so, force it to stay checked by setting value=True
+                    force_checked = (checkbox_key in st.session_state and 
+                                   st.session_state.get(f"{checkbox_key}_force_checked", False))
+                    
                     checked = st.checkbox(
                         "",
-                        value=is_selected,
+                        value=is_selected or force_checked,
                         key=checkbox_key,
                         label_visibility="collapsed"
                     )
+                    
+                    # Clear the force flag after using it
+                    if f"{checkbox_key}_force_checked" in st.session_state:
+                        del st.session_state[f"{checkbox_key}_force_checked"]
                     
                     # SYNC: If checkbox state changed, update shared selection
                     if checked and not is_selected:
@@ -849,8 +858,8 @@ def display_structured_response(response_data, raw_data=None, user_query="", app
                         st.session_state[selection_key] = org['name']
                         st.rerun()
                     elif not checked and is_selected:
-                        # User just unchecked the selected box - keep it checked
-                        st.session_state[checkbox_key] = True
+                        # User tried to uncheck the selected box - prevent it in next run
+                        st.session_state[f"{checkbox_key}_force_checked"] = True
                         st.rerun()
                 
                 with col_content:
