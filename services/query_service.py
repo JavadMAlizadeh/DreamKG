@@ -118,8 +118,8 @@ class QueryService:
             'film': ['film', 'movies', 'foreign film', 'video'],
 
             # Shelter, Food Bank, Mental Health Services
-            'shelter': ['shelter', 'housing', 'safe housing', 'short-term housing', 'residential housing', 'help find housing'],
-            'food': ['food', 'meals', 'emergency food', 'food pantry', 'nutrition', 'food delivery'],
+            'shelter': ['stay', 'shelter', 'housing', 'safe housing', 'short-term housing', 'residential housing', 'help find housing'],
+            'food': ['food', 'meals', 'meal', 'emergency food', 'food pantry', 'nutrition', 'food delivery'],
             'mental health': ['mental health', 'mental health care', 'counseling', 'therapy', 'psychiatric', 'support groups', 'peer support', 'bereavement', 'anger management', 'group therapy'],
             'substance abuse': ['substance abuse', 'addiction', 'recovery', 'sober living', 'detox', '12-step', 'outpatient treatment'],
             'financial': ['financial', 'financial assistance', 'emergency payments', 'pay for housing', 'pay for utilities', 'government benefits'],
@@ -136,6 +136,14 @@ class QueryService:
             'wifi': 'wi-fi',          # FIXED: wifi -> wi-fi
             'internet': 'wi-fi',      # internet -> wi-fi
             'wireless': 'wi-fi',      # wireless -> wi-fi
+
+            # Food/Meal normalization - ADD THESE
+            'meal': 'food',         
+            'meals': 'food',
+            'dining': 'food',
+            'lunch': 'food',
+            'dinner': 'food',
+            'breakfast': 'food',
             
             # Other normalizations (normalize to singular/database format)
             'appeals': 'appeal',
@@ -155,7 +163,9 @@ class QueryService:
             'statements': 'statement',
             'estimates': 'estimate',
             'meals': 'food',
+            'meal': 'food',
             'housing': 'shelter',
+            'stay': 'shelter',
             'clothes': 'clothing',
             
             # Service variations
@@ -695,6 +705,7 @@ SPATIAL QUERY INSTRUCTIONS:
                 self.metrics.end_llm_timing()
             
             expanded_cypher_query = cypher_response.get('text', '')
+            expanded_cypher_query = self._clean_cypher_response(expanded_cypher_query)
             logging.info(f"Generated expanded Cypher Query:\n\n{expanded_cypher_query}")
             
             # Validate expanded spatial query
@@ -843,6 +854,7 @@ SPATIAL QUERY INSTRUCTIONS:
                 self.metrics.end_llm_timing()
             
             closest_cypher_query = cypher_response.get('text', '')
+            closest_cypher_query = self._clean_cypher_response(closest_cypher_query)
             
             # Ensure the query has LIMIT 1 to get only the closest
             if 'LIMIT' not in closest_cypher_query.upper():
@@ -1007,6 +1019,209 @@ SPATIAL QUERY INSTRUCTIONS:
         
         # If no priority match, return the first keyword
         return keywords[0]
+    
+    def _extract_all_service_keywords(self, query):
+        """
+        Extract ALL service keywords from query (not just primary).
+        Returns list of service keywords in order of specificity.
+        
+        Args:
+            query (str): User query
+            
+        Returns:
+            list: All detected service keywords
+        """
+        query_lower = query.lower()
+        detected_services = []
+        
+        # Check each service category
+        for category, synonyms in self.service_synonyms.items():
+            for synonym in synonyms:
+                if synonym in query_lower:
+                    if category not in detected_services:
+                        detected_services.append(category)
+                    break
+        
+        # Also extract direct keywords
+        direct_service_words = [
+            'wi-fi', 'computer', 'print', 'copy', 'scan', 'class', 'workshop',
+            'story time', 'meeting room', 'study room', 'book', 'appeal',
+            'benefit', 'card', 'statement', 'job', 'homework', 'esl',
+            'deposit', 'change', 'direct', 'shelter', 'food', 'mental health', 
+            'substance abuse', 'counseling', 'therapy', 'pantry', 'meals'
+        ]
+        
+        for word in direct_service_words:
+            if word in query_lower and word not in detected_services:
+                detected_services.append(word)
+        
+        if detected_services:
+            logging.info(f"Extracted all service keywords: {detected_services}")
+        
+        return detected_services    
+        
+    def categorize_services_by_category(self, query):
+        """
+        Categorize requested services into their organization categories.
+        Uses LLM to intelligently map services to categories based on meaning.
+        Returns categories in priority order.
+        
+        Args:
+            query (str): User query
+            
+        Returns:
+            dict: {category_name: [services_for_that_category]}
+        """
+        from config import Config
+        
+        # Extract all service keywords
+        normalized_query = self._normalize_service_keywords(query)
+        all_services = self._extract_all_service_keywords(normalized_query)
+        
+        if not all_services:
+            return {}
+        
+        logging.info(f"Detected services to categorize: {all_services}")
+        
+        # Use LLM to categorize services with ENHANCED semantic understanding
+        categorization_prompt = f"""
+    You are an expert at categorizing social services into organization types. Given these detected services from a user query, assign each service to the MOST APPROPRIATE category based on its SEMANTIC MEANING and PRIMARY PURPOSE.
+
+    USER QUERY: {query}
+    DETECTED SERVICES: {', '.join(all_services)}
+
+    AVAILABLE CATEGORIES AND THEIR CORE PURPOSES:
+    1. **Food Bank** - Organizations providing FOOD assistance, meals, emergency supplies, shelter, clothing, and social support services
+    2. **Library** - Educational institutions offering books, computers, wi-fi, classes, programs, and community spaces  
+    3. **Social Security Office** - Government offices handling benefits, retirement, disability, appeals, cards, and official documents
+    4. **Mental Health** - Healthcare facilities providing therapy, counseling, psychiatric care, and mental health treatment
+    5. **Temporary Shelter** - Emergency housing facilities offering shelter, housing assistance, and crisis support services
+
+    COMPREHENSIVE SERVICE EXAMPLES BY CATEGORY:
+
+    **Food Bank Services:**
+    - FOOD RELATED: meal, meals, food, emergency food, food pantry, food delivery, nutrition, dining, lunch, dinner, breakfast
+    - SHELTER/HOUSING: temporary shelter, clothing, help find housing, safe housing, short-term housing
+    - SUPPORT: counseling, case management, community support, navigating the system
+    - BASIC NEEDS: personal hygiene, baby supplies, home goods, toys & gifts
+
+    **Library Services:**
+    - TECHNOLOGY: wi-fi, wifi, internet, computer, computers, printing, printer, copying, scanning
+    - EDUCATION: classes, workshops, ESL, GED, literacy, homework help, tutoring
+    - CHILDREN: story time, after-school programs, summer programs, STEM classes
+    - SPACE: meeting rooms, study rooms, books, collections, research
+
+    **Social Security Office Services:**
+    - BENEFITS: benefits, retirement, disability, SSI, medicare, social security
+    - DOCUMENTS: appeal, card replacement, 1099, statements, proof of benefits
+    - ACCOUNT: change address, direct deposit, earnings history
+
+    **Mental Health Services:**
+    - CLINICAL: therapy, counseling, psychiatric care, mental health evaluation, medication management
+    - TREATMENT: addiction recovery, substance abuse, detox, residential treatment, outpatient treatment
+    - SUPPORT: support groups, peer support, group therapy, individual counseling
+
+    **Temporary Shelter Services:**
+    - HOUSING: shelter, emergency housing, residential housing, help find housing
+    - CRISIS: emergency payments, weather relief, disaster response
+    - SUPPORT: case management, counseling, financial assistance
+
+    CRITICAL SEMANTIC UNDERSTANDING RULES:
+    1. **"meal" or "meals"** → Food Bank (PRIMARY: food assistance)
+    2. **"food" or "dining"** → Food Bank (PRIMARY: food services)
+    3. **"printer" or "printing"** → Library (PRIMARY: technology services)
+    4. **"wi-fi" or "wifi" or "internet"** → Library (PRIMARY: technology access)
+    5. **"computer"** → Library (PRIMARY: technology access)
+    6. **"counseling"** → If mental health specific → Mental Health, otherwise → Food Bank (general support)
+    7. **"shelter" or "housing"** → If emergency/crisis → Temporary Shelter, if support/navigation → Food Bank
+    8. **"therapy" or "psychiatric"** → Mental Health (PRIMARY: clinical treatment)
+    9. **"benefits" or "retirement"** → Social Security Office (PRIMARY: government benefits)
+    10. **"appeal"** → Social Security Office (PRIMARY: decision appeals)
+
+    MATCHING STRATEGY:
+    - Understand the SEMANTIC MEANING, not just exact word matching
+    - "meal" = "meals" = "food" = "dining" → All map to Food Bank
+    - "printer" = "printing" → Both map to Library  
+    - "computer" = "computers" → Both map to Library
+    - Consider the PRIMARY PURPOSE of the service when categorizing
+    - If a service fits multiple categories, choose based on PRIMARY meaning in user's context
+    - Only return categories that have at least one service
+
+    OUTPUT FORMAT (JSON only, no explanation):
+    {{
+        "Food Bank": ["meal"],
+        "Library": ["printer"]
+    }}
+
+    Now categorize the detected services:
+    """
+        
+        try:
+            # Call LLM for categorization
+            from langchain_groq import ChatGroq
+            llm = ChatGroq(model=Config.LLM_MODEL, temperature=0)
+            
+            response = llm.invoke(categorization_prompt)
+            response_text = response.content.strip()
+            
+            # Parse JSON response
+            import json
+            # Extract JSON if wrapped in markdown
+            if "```json" in response_text:
+                response_text = response_text.split("```json")[1].split("```")[0].strip()
+            elif "```" in response_text:
+                response_text = response_text.split("```")[1].split("```")[0].strip()
+            
+            categorized = json.loads(response_text)
+            
+            # Sort by category order
+            ordered_categories = {}
+            for category in Config.CATEGORY_ORDER:
+                if category in categorized and categorized[category]:
+                    ordered_categories[category] = categorized[category]
+            
+            logging.info(f"Services categorized by LLM: {ordered_categories}")
+            return ordered_categories
+            
+        except Exception as e:
+            logging.error(f"LLM categorization failed: {str(e)}")
+            
+            # Enhanced fallback with semantic understanding
+            categorized = {}
+            
+            # Define semantic mappings for fallback
+            semantic_mappings = {
+                'Food Bank': ['meal', 'meals', 'food', 'dining', 'lunch', 'dinner', 'breakfast', 
+                            'emergency food', 'food pantry', 'nutrition'],
+                'Library': ['printer', 'printing', 'print', 'computer', 'computers', 'wifi', 'wi-fi', 
+                        'internet', 'copy', 'copying', 'scan', 'scanning', 'book', 'books'],
+                'Social Security Office': ['benefit', 'benefits', 'retirement', 'appeal', 'appeals', 
+                                        'card', 'social security', 'disability', 'ssi'],
+                'Mental Health': ['therapy', 'counseling', 'psychiatric', 'mental health', 
+                                'addiction', 'substance abuse', 'recovery'],
+                'Temporary Shelter': ['stay', 'shelter', 'housing', 'emergency housing']
+            }
+            
+            for service in all_services:
+                service_lower = service.lower()
+                
+                # Check semantic mappings
+                for category, keywords in semantic_mappings.items():
+                    if any(keyword in service_lower or service_lower in keyword for keyword in keywords):
+                        if category not in categorized:
+                            categorized[category] = []
+                        if service not in categorized[category]:
+                            categorized[category].append(service)
+                        break
+            
+            # Sort by priority order
+            ordered_categories = {}
+            for category in Config.CATEGORY_ORDER:
+                if category in categorized:
+                    ordered_categories[category] = categorized[category]
+            
+            logging.info(f"Services categorized (enhanced fallback): {ordered_categories}")
+            return ordered_categories
 
     def _validate_spatial_cypher(self, cypher_query):
         """Validate that spatial Cypher query doesn't contain location-based filters."""
@@ -1389,7 +1604,7 @@ SPATIAL QUERY INSTRUCTIONS:
     def _clean_cypher_response(self, cypher_response_text):
         """
         Clean the LLM response to extract only the executable Cypher query.
-        Removes explanatory text, markdown formatting, and other non-Cypher content.
+        Removes explanatory text, markdown formatting, and fixes curly brace escaping.
         
         Args:
             cypher_response_text (str): Raw response from LLM
@@ -1430,6 +1645,18 @@ SPATIAL QUERY INSTRUCTIONS:
         # Remove any remaining ``` at the end
         cypher_text = cypher_text.replace("```", "").strip()
         
+        # CRITICAL FIX: Convert escaped curly braces back to Neo4j format
+        # LangChain template escaping creates {{{{ and }}}} 
+        # We need to convert them back to single { and } for Neo4j
+        
+         # Fix EXISTS clause braces: {{{{ becomes {
+        cypher_text = cypher_text.replace("{{", "{")
+        cypher_text = cypher_text.replace("}}", "}")
+        
+        # Keep COLLECT braces as double: {{service becomes {service
+        # The COLLECT pattern should remain as {service: s.name, type: r.type}
+        # This is already handled correctly by the above replacements
+        
         # Additional cleanup: remove any non-Cypher explanatory text at the beginning
         lines = cypher_text.split('\n')
         cypher_start_keywords = ['MATCH', 'OPTIONAL', 'WITH', 'CREATE', 'MERGE', 'DELETE', 'DETACH', 'SET', 'REMOVE', 'RETURN', 'CALL', 'USING', 'UNWIND']
@@ -1450,5 +1677,6 @@ SPATIAL QUERY INSTRUCTIONS:
         cypher_text = cypher_text.strip()
         
         logging.info(f"Cleaned Cypher query from LLM response. Original length: {len(cypher_response_text)}, Cleaned length: {len(cypher_text)}")
+        logging.info(f"Curly brace conversion applied for Neo4j compatibility")
         
         return cypher_text

@@ -1,4 +1,5 @@
-# Give a strict style to the response
+# Fixed the issue with disappearing the previous responses.
+# Fixed Cypher query issue.
 
 import streamlit as st
 import streamlit.components.v1 as components
@@ -20,20 +21,25 @@ from services.response_service import ResponseService
 from services.google_sheets_logger import GoogleSheetsLogger
 
 class OrganizationInfoApp:
+    """
+    Main application class with enhanced metrics tracking for all operations.
+    Provides detailed insights into token usage, latency breakdowns, and processing times.
+    """
+    
     def __init__(self, session_id=None):
-        """Initialize the application with session isolation."""
-        # Generate unique session ID if not provided
+        """Initialize the application with enhanced metrics tracking."""
+        # Generate session ID if not provided
         if session_id is None:
             import uuid
             session_id = str(uuid.uuid4())
         
         self.session_id = session_id
         
-        # Setup logging with unique session ID - call the NEW method
+        # Setup logging with session ID
         self.log_filename = Config.setup_logging_with_session_id(session_id)
         Config.validate_config()
         
-        # Initialize enhanced metrics collector with session ID
+        # Initialize enhanced metrics collector first
         self.metrics = MetricsCollector(session_id=session_id)
 
         # Initialize Google Sheets logger
@@ -54,138 +60,43 @@ class OrganizationInfoApp:
             self.neo4j_client, 
             self.spatial_intel, 
             self.memory,
-            self.metrics
+            self.metrics  # Pass enhanced metrics collector to query service
         )
         self.response_service = ResponseService()
         
         logging.info(f"OrganizationInfoApp initialized for session: {self.session_id}")
     
     def log_session_to_sheets(self):
-        """Log the current session data to Google Sheets with enhanced debugging."""
+        """Log the current session data to Google Sheets."""
         if self.sheets_logger and self.sheets_logger.initialized:
             try:
-                logging.info("="*50)
-                logging.info("STARTING GOOGLE SHEETS LOGGING PROCESS")
-                
                 # Get current metrics data
                 metrics_data = self.metrics.get_statistics()
-                logging.info(f"Retrieved metrics data: {len(str(metrics_data))} characters")
-                
-                # Debug: Check log file before sending
-                logging.info(f"Log filename to send: {self.log_filename}")
-                
-                if os.path.exists(self.log_filename):
-                    file_size = os.path.getsize(self.log_filename)
-                    logging.info(f"Log file exists. Size: {file_size} bytes")
-                    
-                    # Read a preview of the log file to ensure it has content
-                    try:
-                        with open(self.log_filename, 'r', encoding='utf-8') as f:
-                            preview = f.read(500)  # First 500 characters
-                        logging.info(f"Log file preview (first 500 chars): {repr(preview)}")
-                    except Exception as e:
-                        logging.error(f"Could not read log file preview: {str(e)}")
-                else:
-                    logging.error(f"Log file does not exist at path: {self.log_filename}")
-                    # List directory contents for debugging
-                    log_dir = os.path.dirname(self.log_filename)
-                    if os.path.exists(log_dir):
-                        contents = os.listdir(log_dir)
-                        logging.info(f"Contents of {log_dir}: {contents}")
-                    else:
-                        logging.error(f"Log directory does not exist: {log_dir}")
-                    return
                 
                 # Log to Google Sheets
-                logging.info("Calling sheets_logger.log_session_data()")
                 self.sheets_logger.log_session_data(self.log_filename, metrics_data)
-                logging.info("sheets_logger.log_session_data() completed")
-                
                 logging.info("Session data logged to Google Sheets successfully")
-                logging.info("="*50)
                 
             except Exception as e:
                 logging.error(f"Failed to log session to Google Sheets: {str(e)}")
-                logging.error(f"Error type: {type(e).__name__}")
-                import traceback
-                logging.error(f"Full traceback: {traceback.format_exc()}")
         else:
-            if not self.sheets_logger:
-                logging.warning("Google Sheets logger is None, skipping session log")
-            elif not self.sheets_logger.initialized:
-                logging.warning("Google Sheets logger not initialized, skipping session log")
-            else:
-                logging.warning("Google Sheets logger not available for unknown reason")
-
+            logging.warning("Google Sheets logger not available, skipping session log")
 
     def get_log_filename(self):
-        """Get the current log filename with validation."""
-        logging.info(f"Current log filename: {self.log_filename}")
-        if os.path.exists(self.log_filename):
-            size = os.path.getsize(self.log_filename)
-            logging.info(f"Log file exists and is {size} bytes")
-        else:
-            logging.warning(f"Log file does not exist: {self.log_filename}")
+        """Get the current log filename."""
         return self.log_filename
 
     def read_log_file(self):
-        """Read the current log file content with enhanced debugging."""
+        """Read the current log file content."""
         try:
-            logging.info(f"Attempting to read log file: {self.log_filename}")
-            
-            if not os.path.exists(self.log_filename):
-                error_msg = f"Log file not found: {self.log_filename}"
-                logging.error(error_msg)
-                return error_msg
-            
-            file_size = os.path.getsize(self.log_filename)
-            logging.info(f"Log file size: {file_size} bytes")
-            
-            if file_size == 0:
-                warning_msg = "Log file exists but is empty"
-                logging.warning(warning_msg)
-                return warning_msg
-            
-            with open(self.log_filename, 'r', encoding='utf-8') as f:
-                content = f.read()
-            
-            logging.info(f"Successfully read log file. Content length: {len(content)} characters")
-            
-            # Log first and last few lines for debugging
-            lines = content.split('\n')
-            logging.info(f"Log file has {len(lines)} lines")
-            if len(lines) > 0:
-                logging.info(f"First line: {repr(lines[0])}")
-                if len(lines) > 1:
-                    logging.info(f"Last line: {repr(lines[-1])}")
-            
-            return content
-            
+            import os
+            if os.path.exists(self.log_filename):
+                with open(self.log_filename, 'r', encoding='utf-8') as f:
+                    return f.read()
+            else:
+                return "Log file not found."
         except Exception as e:
-            error_msg = f"Error reading log file: {str(e)}"
-            logging.error(error_msg)
-            return error_msg
-        
-    # Also add this method to test the sheets connection
-    def test_sheets_connection(self):
-        """Test the Google Sheets connection and log results."""
-        if self.sheets_logger:
-            try:
-                logging.info("Testing Google Sheets connection...")
-                result = self.sheets_logger.test_connection()
-                logging.info(f"Google Sheets connection test result: {result}")
-                
-                # Get worksheet info for debugging
-                info = self.sheets_logger.get_worksheet_info()
-                logging.info(f"Worksheet info: {info}")
-                
-                return result
-            except Exception as e:
-                logging.error(f"Error testing sheets connection: {str(e)}")
-                return False
-        else:
-            logging.error("No sheets logger available for connection test")
-            return False
+            return f"Error reading log file: {str(e)}"
     
     def _is_personal_location_query(self, user_query):
         """
@@ -328,7 +239,11 @@ class OrganizationInfoApp:
             
             # Process query directly with coordinates (bypass spatial intelligence)
             query_result = self.query_service.process_query_with_coordinates(user_query, coordinates)
-            
+
+            # LIMIT TO TOP 5 RESULTS
+            if query_result.get('results'):
+                query_result['results'] = query_result['results'][:10]
+
             # Record memory usage with timing
             self.metrics.record_memory_usage(
                 used_memory=query_result.get('used_memory', False),
@@ -430,7 +345,11 @@ class OrganizationInfoApp:
             
             # Process query through full pipeline with enhanced metrics
             query_result = self.query_service.process_query(user_query)
-            
+
+            # LIMIT TO TOP 5 RESULTS
+            if query_result.get('results'):
+                query_result['results'] = query_result['results'][:10]
+
             # Record spatial detection with enhanced metrics
             if 'spatial_info' in query_result and query_result['spatial_info']:
                 spatial_info = query_result['spatial_info']
@@ -511,6 +430,10 @@ class OrganizationInfoApp:
             str: Response content
         """
         cached_results = self.query_service.get_cached_results()
+
+        # LIMIT TO TOP 5 RESULTS
+        if cached_results:
+            cached_results = cached_results[:10]
         
         # Record memory usage with timing
         import time
@@ -696,63 +619,309 @@ st.set_page_config(
     layout="centered",
 )
 
-def display_structured_response(response_data):
+
+def display_structured_response(response_data, raw_data=None, user_query="", app_instance=None, message_index=None, start_coordinates=None, all_categories_data=None, current_category_index=None):
     """
-    Display structured response data in Streamlit with proper formatting.
+    Display structured response with synchronized selection:
+    - SHORT ANSWER: Shows the selected option
+    - EXPANDABLE OPTIONS: All options with CHECKBOXES for selection + complete details  
+    - EXPANDABLE DIRECTIONS: Dropdown + Maps + directions (synced with checkboxes)
+    """
+    # Use the query passed to this function directly - no session state storage needed
+    effective_user_query = user_query if user_query else ""
     
-    Args:
-        response_data: Either a string (old format) or dict (new structured format)
-    """
     # Handle old format (string responses)
     if isinstance(response_data, str):
         st.markdown(response_data)
         return
-    
+        
     # Handle new structured format
     if isinstance(response_data, dict) and response_data.get('type') == 'structured':
-        # Display intro text
-        if response_data.get('intro'):
-            st.markdown(response_data['intro'])
-            st.write("")  # Empty line
+        organizations = response_data.get('organizations', [])
         
-        # Display each organization
-        for org in response_data.get('organizations', []):
-            # Organization header - numbered with bold name
-            st.markdown(f"**{org['number']}. {org['name']}**")
+        if not organizations:
+            st.write("No organizations found.")
+            return
+        
+        # Create unique key suffix based on message index or current time
+        key_suffix = f"_{message_index}" if message_index is not None else f"_{int(time.time() * 1000)}"
+        
+        # Get organization names for selection
+        org_names = [org['name'] for org in organizations]
+        
+        # SHARED SESSION STATE KEY - used by both checkboxes and dropdown
+        selection_key = f"destination_selector{key_suffix}"
+        
+        # Initialize selection if not set
+        if selection_key not in st.session_state:
+            st.session_state[selection_key] = org_names[0]  # Default to first organization
+        
+        # Find the selected organization by name
+        selected_org_name = st.session_state[selection_key]
+        selected_org = organizations[0]  # Default to first organization
+        for org in organizations:
+            if org['name'] == selected_org_name:
+                selected_org = org
+                break
+        
+        # ===== SHORT ANSWER - Dynamic and context-aware =====
+        st.markdown(f"**{selected_org['name']}**")
+
+        # Analyze query to determine what to show - USE EFFECTIVE QUERY
+        query_lower = effective_user_query.lower() if effective_user_query else ""
+
+        # Build concise info string with NO extra spacing
+        short_text = ""
+
+        # Distance (always show if spatial)
+        for item in selected_org.get('main_items', []):
+            if 'Distance:' in item:
+                short_text += f"● {item}<br>"
+                break
+
+        # Phone (always show)
+        for item in selected_org.get('main_items', []):
+            if 'Phone:' in item:
+                short_text += f"● {item}<br>"
+                break
+
+        # Address (always show)
+        for item in selected_org.get('main_items', []):
+            if 'Address:' in item:
+                short_text += f"● {item}<br>"
+                break
+
+        # Hours - check if query mentions a specific day
+        days_map = {
+            'monday': 'Monday', 'mon': 'Monday',
+            'tuesday': 'Tuesday', 'tue': 'Tuesday', 'tues': 'Tuesday',
+            'wednesday': 'Wednesday', 'wed': 'Wednesday',
+            'thursday': 'Thursday', 'thu': 'Thursday', 'thur': 'Thursday', 'thurs': 'Thursday',
+            'friday': 'Friday', 'fri': 'Friday',
+            'saturday': 'Saturday', 'sat': 'Saturday',
+            'sunday': 'Sunday', 'sun': 'Sunday'
+        }
+
+        # Check if a specific day is mentioned in the query
+        mentioned_day = None
+        for day_variant, full_day in days_map.items():
+            if day_variant in query_lower:
+                mentioned_day = full_day
+                break
+
+        # SHORT ANSWER HOURS - show ONLY if a specific day is mentioned
+        if mentioned_day:
+            hours = selected_org.get('hours', {})
+            if hours and mentioned_day in hours:
+                short_text += f"● Time: {mentioned_day}, {hours[mentioned_day]}<br>"
+    
+
+        # Services - show ONLY requested services based on NORMALIZED query keywords
+        services = selected_org.get('services', {})
+        all_free = services.get('free', [])
+        all_paid = services.get('paid', [])
+
+        if all_free or all_paid:
+            # Use the app's query service to get normalized keywords
+            requested_services = set()
             
-            # Combine all main details with black bullets (●) into one block for tighter spacing
-            main_items_text = ""
-            for item in org.get('main_items', []):
-                main_items_text += f"● {item}<br>"
-            
-            # Hours section with black bullet and white sub-bullets (compressed)
-            if org.get('hours'):
-                main_items_text += "● Hours:<br>"
-                for day, hours in org['hours'].items():
-                    main_items_text += f"&nbsp;&nbsp;&nbsp;&nbsp;○ {day}: {hours}<br>"
-            
-            # Services section with black bullet and white sub-bullets (compressed)
-            services = org.get('services', {})
-            if services.get('free') or services.get('paid'):
-                main_items_text += "● Services:<br>"
+            if app_instance:
+                # Method 1: Extract and normalize service keywords using the app's system
+                try:
+                    # Use the same normalization that happens in query processing
+                    normalized_query = effective_user_query.lower()
+                    
+                    # Get keyword mappings from Config if available
+                    from config import Config
+                    
+                    # Use Config.KEYWORD_NORMALIZATION if it exists, otherwise use fallback
+                    if hasattr(Config, 'KEYWORD_NORMALIZATION'):
+                        keyword_mappings = Config.KEYWORD_NORMALIZATION
+                    else:
+                        # Fallback keyword mappings
+                        keyword_mappings = {
+                            'stay': 'shelter',
+                            'place to stay': 'shelter',
+                            'somewhere to stay': 'shelter',
+                            'food': 'food',
+                            'eat': 'food',
+                            'meal': 'food',
+                            'library': 'library',
+                            'book': 'library',
+                            'wifi': 'library',
+                            'internet': 'library',
+                            'mental health': 'mental health',
+                            'counseling': 'mental health',
+                            'therapy': 'mental health',
+                            'retirement': 'retirement'
+                        }
+                    
+                    # Normalize keywords in the query
+                    for raw_keyword, normalized_keyword in keyword_mappings.items():
+                        if raw_keyword in normalized_query:
+                            requested_services.add(normalized_keyword)
+                            logging.info(f"Normalized '{raw_keyword}' to '{normalized_keyword}' for short answer")
+                    
+                    # Also check Config.CATEGORY_SERVICES with normalized matching
+                    from config import Config
+                    for category_services in Config.CATEGORY_SERVICES.values():
+                        for service in category_services:
+                            service_lower = service.lower()
+                            # Check if normalized service appears in query
+                            if service_lower in normalized_query:
+                                requested_services.add(service_lower)
+                            # Check individual words
+                            query_words = normalized_query.split()
+                            for word in query_words:
+                                if word in service_lower.split():
+                                    requested_services.add(service_lower)
                 
-                # Free services
-                for service in services.get('free', []):
-                    main_items_text += f"&nbsp;&nbsp;&nbsp;&nbsp;○ Free: {service}<br>"
+                except Exception as e:
+                    logging.warning(f"Could not normalize keywords: {e}")
+                    # Fallback to original logic
+                    from config import Config
+                    query_words = query_lower.split()
+                    for category_services in Config.CATEGORY_SERVICES.values():
+                        for service in category_services:
+                            service_lower = service.lower()
+                            if service_lower in query_lower:
+                                requested_services.add(service_lower)
+                            for word in query_words:
+                                if word in service_lower.split():
+                                    requested_services.add(service_lower)
+            else:
+                # Fallback if no app instance
+                from config import Config
+                query_words = query_lower.split()
+                for category_services in Config.CATEGORY_SERVICES.values():
+                    for service in category_services:
+                        service_lower = service.lower()
+                        if service_lower in query_lower:
+                            requested_services.add(service_lower)
+                        for word in query_words:
+                            if word in service_lower.split():
+                                requested_services.add(service_lower)
+            
+            # If we found requested services, filter to show only those
+            if requested_services:
+                logging.info(f"Requested services for short answer (normalized): {requested_services}")
+                matching_free = [s for s in all_free if any(req in s.lower() for req in requested_services)]
+                matching_paid = [s for s in all_paid if any(req in s.lower() for req in requested_services)]
                 
-                # Paid services
-                for service in services.get('paid', []):
-                    main_items_text += f"&nbsp;&nbsp;&nbsp;&nbsp;○ Paid: {service}<br>"
-            
-            # Display all content for this organization in one markdown block
-            if main_items_text:
-                st.markdown(main_items_text.rstrip('<br>'), unsafe_allow_html=True)
-            
-            # Add spacing between organizations only
-            st.write("")
+                if matching_free or matching_paid:
+                    # Combine services into a single line
+                    service_list = []
+                    for service in matching_free:
+                        service_list.append(f"{service} (Free)")
+                    for service in matching_paid:
+                        service_list.append(f"{service} (Paid)")
+                    
+                    short_text += f"● Services: {', '.join(service_list)}<br>"
+
+        # Display short answer as single HTML block (no extra spacing)
+        if short_text:
+            st.markdown(short_text.rstrip('<br>'), unsafe_allow_html=True)
+        
+        # ===== EXPANDABLE OPTIONS - All organizations with CHECKBOXES =====
+        with st.expander("More options...", expanded=False):
+            # Display ALL organizations with CHECKBOXES and complete details
+            for org_idx, org in enumerate(organizations):
+                # Create checkbox key for this organization
+                checkbox_key = f"checkbox_{key_suffix}_{org_idx}"
+                
+                # Determine if this org is currently selected
+                is_selected = (org['name'] == st.session_state[selection_key])
+                
+                # Create columns
+                col_checkbox, col_content = st.columns([0.35, 9.65])
+                
+                with col_checkbox:
+                    checked = st.checkbox(
+                        "",
+                        value=is_selected,
+                        key=checkbox_key,
+                        label_visibility="collapsed"
+                    )
+                    
+                    # SYNC: If checkbox state changed, update shared selection
+                    if checked and not is_selected:
+                        # User just checked this box - select this organization
+                        st.session_state[selection_key] = org['name']
+                        st.rerun()
+                    elif not checked and is_selected:
+                        # User just unchecked the selected box - keep it checked
+                        st.session_state[checkbox_key] = True
+                        st.rerun()
+                
+                with col_content:
+                    # Organization header
+                    st.markdown(f"**{org['number']}. {org['name']}**")
+                    
+                    # All details
+                    full_text = ""
+                    
+                    # Distance
+                    if any('Distance:' in item for item in org.get('main_items', [])):
+                        distance_item = [item for item in org['main_items'] if 'Distance:' in item][0]
+                        full_text += f"● {distance_item}<br>"
+                    
+                    # Phone
+                    if any('Phone:' in item for item in org.get('main_items', [])):
+                        phone_item = [item for item in org['main_items'] if 'Phone:' in item][0]
+                        full_text += f"● {phone_item}<br>"
+                    
+                    # Address
+                    if any('Address:' in item for item in org.get('main_items', [])):
+                        address_item = [item for item in org['main_items'] if 'Address:' in item][0]
+                        full_text += f"● {address_item}<br>"
+                    
+                    # FULL ANSWER HOURS - ALWAYS show ALL hours regardless of query
+                    hours_full = org.get('hours', {})
+                    if hours_full:
+                        full_text += "● Hours:<br>"
+                        day_order = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday']
+                        for day in day_order:
+                            if day in hours_full:
+                                full_text += f"&nbsp;&nbsp;&nbsp;&nbsp;○ {day}: {hours_full[day]}<br>"
+                    
+                    # ALL Services
+                    services = org.get('services', {})
+                    all_free = services.get('free', [])
+                    all_paid = services.get('paid', [])
+                    
+                    if all_free or all_paid:
+                        full_text += "● Services:<br>"
+                        
+                        if all_free:
+                            for service in all_free:
+                                full_text += f"&nbsp;&nbsp;&nbsp;&nbsp;○ Free: {service}<br>"
+                        
+                        if all_paid:
+                            for service in all_paid:
+                                full_text += f"&nbsp;&nbsp;&nbsp;&nbsp;○ Paid: {service}<br>"
+                    
+                    # Display all information
+                    if full_text:
+                        st.markdown(full_text.rstrip('<br>'), unsafe_allow_html=True)
+                
+                st.write("")  # Original spacing between organizations (no lines)
+        
+        # ===== SEPARATE EXPANDABLE DIRECTIONS - Dropdown + Maps =====
+        if raw_data:
+            with st.expander("Get directions...", expanded=False):
+                # Call the directions function with all parameters
+                display_embedded_directions_for_all_organizations(
+                    raw_data=raw_data,
+                    user_query=user_query,
+                    app_instance=app_instance,
+                    message_index=message_index,
+                    start_coordinates=start_coordinates,
+                    all_categories_data=all_categories_data,
+                    current_category_index=current_category_index
+                )
     
     else:
-        # Fallback - treat as string
+        # Fallback
         st.markdown(str(response_data))
 
 # --- Geolocation Component ---
@@ -886,11 +1055,9 @@ st.markdown("""
 Welcome! Ask a question about **Food Banks**, **Mental Health Centers**, **Shelters**, **Public Libraries**, and **Social Security offices** in Philadelphia.
 
 **Examples:**
-* Looking for a library on West Lehigh Avenue that has free wi-fi on a Tuesday.
-* Where can I apply for retirement benefits on Aramingo Avenue on a Wednesday?
-* Looking for a food bank near me.
-* Looking for a mental health center in my area.
-* Looking for a shelter on North Broad Street.
+* Do you know if there’s a library on West Lehigh Avenue with free Wi-Fi on Tuesdays?
+* Can you help me find a mental health center nearby?
+* I’m looking for food, a library where I can print a document, and somewhere to stay.
 
 **Before You Continue:**
 * Please enable location access to view results near you.<br>        
@@ -898,15 +1065,15 @@ Welcome! Ask a question about **Food Banks**, **Mental Health Centers**, **Shelt
 * Your session activity will be securely logged and transmitted to our servers to support monitoring and service improvements.
 """, unsafe_allow_html=True)
 
-st.markdown("---")
-
 # Request user location after the welcome message to avoid any spacing issues
 get_user_location()
 
+st.markdown("---")
+
 # --- Application Initialization ---
+@st.cache_resource
 def get_session_app():
-    """Get or create app instance for current session."""
-    # Use Streamlit's session_state to store per-user app instances
+    """Get or create app instance for current session with proper isolation."""
     if 'app_instance' not in st.session_state:
         # Create unique session ID for this user
         import uuid
@@ -914,6 +1081,7 @@ def get_session_app():
         st.session_state.session_id = session_id
         
         try:
+            # Create app instance with session ID
             st.session_state.app_instance = OrganizationInfoApp(session_id=session_id)
             logging.info(f"Created new app instance for session: {session_id[:8]}...")
         except Exception as e:
@@ -924,21 +1092,30 @@ def get_session_app():
 
 app = get_session_app()
 
+
 # --- Configuration for Directions ---
 DIRECTIONS_HEIGHT = 500  # Height for directions iframe
 PLACEHOLDER_HEIGHT = 350  # Height for placeholder when directions fail to load
 
 # --- Embedded Directions Display ---
-def get_user_location_for_directions():
+def get_user_location_for_directions(override_start_coords=None, leg_key_suffix=""):
     """
     Get user's current location for directions based on priority order.
-    Priority: 1. Custom start location, 2. User's actual location, 3. Query location, 4. Default (City Hall)
+    Priority: 1. Leg-specific custom location, 2. Override coordinates (from previous leg), 3. User's actual location, 4. Default
     """
-    # Priority 1: Check if user has set a custom starting point
-    if 'custom_start_location' in st.session_state and st.session_state.custom_start_location:
-        custom_lat, custom_lon = st.session_state.custom_start_location
-        logging.info(f"Using custom start location for directions: {custom_lat}, {custom_lon}")
-        return st.session_state.custom_start_location
+    # Priority 1: Check if THIS LEG has a custom starting point
+    custom_location_key = f"custom_start_location{leg_key_suffix}"
+    custom_location_name_key = f"custom_start_location_name{leg_key_suffix}"
+    
+    if custom_location_key in st.session_state and st.session_state[custom_location_key]:
+        custom_lat, custom_lon = st.session_state[custom_location_key]
+        logging.info(f"Using leg-specific custom start location: {custom_lat}, {custom_lon}")
+        return st.session_state[custom_location_key]
+    
+    # Priority 2: Use override coordinates if provided (from previous leg's selection)
+    if override_start_coords:
+        logging.info(f"Using override start coordinates from previous leg: {override_start_coords}")
+        return override_start_coords
     
     # Priority 2: Check if we have user's actual location (from geolocation)
     if 'user_location' in st.session_state and st.session_state.user_location:
@@ -982,8 +1159,81 @@ def extract_user_location_from_query(query, raw_data, app_instance=None):
 
 @st.cache_data
 def geocode_start_location(address):
-    """Geocode a starting address to coordinates."""
+    """
+    Geocode a starting address to coordinates, or parse if already in coordinate format.
+    
+    Supports multiple coordinate formats:
+    - Simple coordinates: (39.9677, -75.1594) or 39.9677, -75.1594
+    - Labeled coordinates: My Location (39.9725, -75.1599)
+    - Previous stop: Previous Stop (39.9677, -75.1594)
+    - Custom location: Custom (39.9677, -75.1594)
+    - Regular addresses: street names, landmarks, etc.
+    """
     try:
+        import re
+        
+        # Remove extra whitespace and normalize
+        cleaned = address.strip()
+        
+        # Pattern 1: Labeled coordinates - "Label (lat, lon)"
+        # Matches: "My Location (39.9725, -75.1599)", "Previous Stop (39.9677, -75.1594)", etc.
+        labeled_pattern = r'^.+?\s*\(\s*(-?\d+\.?\d*)\s*,\s*(-?\d+\.?\d*)\s*\)$'
+        labeled_match = re.match(labeled_pattern, cleaned)
+        
+        if labeled_match:
+            lat = float(labeled_match.group(1))
+            lon = float(labeled_match.group(2))
+            
+            # Validate coordinate ranges
+            if -90 <= lat <= 90 and -180 <= lon <= 180:
+                # Extract the label for display
+                label = cleaned.split('(')[0].strip()
+                coord_display = f"{label} ({lat:.4f}, {lon:.4f})"
+                logging.info(f"Parsed labeled coordinates: {coord_display}")
+                return lat, lon, coord_display
+            else:
+                logging.warning(f"Labeled coordinates out of valid range: {lat}, {lon}")
+                return None, None, None
+        
+        # Pattern 2: Simple coordinates with or without parentheses
+        # Matches: "(39.9677, -75.1594)", "39.9677, -75.1594", "39.9677,-75.1594"
+        cleaned_no_parens = cleaned.replace('(', '').replace(')', '').strip()
+        simple_coord_pattern = r'^(-?\d+\.?\d*)\s*,\s*(-?\d+\.?\d*)$'
+        simple_match = re.match(simple_coord_pattern, cleaned_no_parens)
+        
+        if simple_match:
+            lat = float(simple_match.group(1))
+            lon = float(simple_match.group(2))
+            
+            # Validate coordinate ranges
+            if -90 <= lat <= 90 and -180 <= lon <= 180:
+                coord_display = f"Coordinates ({lat:.4f}, {lon:.4f})"
+                logging.info(f"Parsed simple coordinates: {lat}, {lon}")
+                return lat, lon, coord_display
+            else:
+                logging.warning(f"Simple coordinates out of valid range: {lat}, {lon}")
+                return None, None, None
+        
+        # Pattern 3: Regular address - proceed with geocoding
+        geolocator = Nominatim(user_agent="dream_kg_directions_app", timeout=10)
+        time.sleep(1)  # Rate limiting
+        
+        # Add Philadelphia context for better results
+        search_query = f"{address}, Philadelphia, PA" if "Philadelphia" not in address else address
+        location = geolocator.geocode(search_query)
+        
+        if location:
+            logging.info(f"Geocoded address '{address}' to: {location.latitude}, {location.longitude}")
+            return location.latitude, location.longitude, location.address
+        else:
+            logging.warning(f"Could not geocode address: {address}")
+            return None, None, None
+            
+    except Exception as e:
+        logging.error(f"Geocoding error for '{address}': {str(e)}")
+        return None, None, None
+        
+        # If not coordinates, proceed with normal geocoding
         geolocator = Nominatim(user_agent="dream_kg_directions_app", timeout=10)
         time.sleep(1)  # Rate limiting
         
@@ -997,27 +1247,85 @@ def geocode_start_location(address):
             return None, None, None
             
     except Exception as e:
+        logging.error(f"Geocoding error for '{address}': {str(e)}")
         return None, None, None
 
-def display_embedded_directions_for_all_organizations(raw_data, user_query="", app_instance=None, message_index=None):
-    """
-    Display embedded directions with dropdown to select from all found organizations.
-    
-    Args:
-        raw_data (list): All organizations found in the search
-        user_query (str): The original user query to extract location from
-        app_instance: The main app instance to access spatial intelligence
-        message_index (int): Index of the message to make keys unique
-    """
+def update_selection_from_dropdown(shared_key, dropdown_key):
+    """Helper to sync dropdown selection to shared state"""
+    if dropdown_key in st.session_state:
+        st.session_state[shared_key] = st.session_state[dropdown_key]
+
+def display_embedded_directions_for_all_organizations(raw_data, user_query="", app_instance=None, message_index=None, start_coordinates=None, all_categories_data=None, current_category_index=None):
     if not raw_data:
         return
+    
+    # LIMIT TO TOP 10 RESULTS FOR DIRECTIONS
+    limited_raw_data = raw_data[:10]
     
     # Create unique key suffix based on message index or current time
     key_suffix = f"_{message_index}" if message_index is not None else f"_{int(time.time() * 1000)}"
     
+    # LEG-SPECIFIC session state keys
+    custom_location_key = f"custom_start_location{key_suffix}"
+    custom_location_name_key = f"custom_start_location_name{key_suffix}"
+    
+    # SHARED Selection key (same as used by checkboxes)
+    selection_key = f"destination_selector{key_suffix}"
+    
     try:
         # Extract user's mentioned location using existing spatial intelligence
         query_location_text = extract_user_location_from_query(user_query, raw_data, app_instance)
+        
+        # ============================================================================
+        # DYNAMIC ROUTING - Check if previous leg has a selection
+        # ============================================================================
+        dynamic_start_coordinates = None
+        previous_selection_info = None
+        
+        # Only apply dynamic routing if we have multi-category data and this isn't the first leg
+        if all_categories_data and current_category_index and current_category_index > 1:
+            # Build the key for the previous leg's selection
+            prev_leg_index = current_category_index - 1
+            # Extract message number from key_suffix (format: "_msgidx_catidx")
+            if "_" in str(message_index):
+                msg_num = str(message_index).split("_")[0]
+            else:
+                msg_num = str(message_index)
+            
+            prev_leg_selection_key = f"destination_selector_{msg_num}_{prev_leg_index}"
+            
+            # Check if user made a selection in the previous leg
+            if prev_leg_selection_key in st.session_state:
+                selected_org_name = st.session_state[prev_leg_selection_key]
+                
+                # Get the previous leg's raw data
+                prev_leg_data = all_categories_data[prev_leg_index - 1]['raw_data']
+                
+                # Find the selected organization's coordinates
+                for record in prev_leg_data:
+                    org_name = (
+                        record.get('o.name') or 
+                        record.get('name') or 
+                        record.get('organizationName')
+                    )
+                    
+                    if org_name == selected_org_name:
+                        # Extract coordinates
+                        lat = record.get('l.latitude') or record.get('latitude')
+                        lon = record.get('l.longitude') or record.get('longitude')
+                        
+                        if lat and lon:
+                            dynamic_start_coordinates = (float(lat), float(lon))
+                            previous_selection_info = {
+                                'org_name': selected_org_name,
+                                'coordinates': dynamic_start_coordinates
+                            }
+                            logging.info(f"Dynamic routing: Using coordinates from {selected_org_name}: {dynamic_start_coordinates}")
+                            break
+        
+        # Override start_coordinates if we found a dynamic route
+        if dynamic_start_coordinates:
+            start_coordinates = dynamic_start_coordinates
         
         # If we found a location in the query and haven't set a custom location yet, use it as default
         if query_location_text and 'custom_start_location' not in st.session_state:
@@ -1037,10 +1345,12 @@ def display_embedded_directions_for_all_organizations(raw_data, user_query="", a
                     st.session_state.query_location_text = query_location_text
         
         # Prepare organization data with geocoded addresses
-        org_options = []
-        org_data = {}
+        org_options = []  # Will store "1. Org Name" format
+        org_name_to_display = {}  # Maps actual name to display format
+        org_data = {}  # Maps actual name to data
         
-        for record in raw_data:
+        org_number = 1  # Counter for numbering
+        for record in limited_raw_data:
             # Get organization name from different possible formats
             org_name = (
                 record.get('o.name') or 
@@ -1093,29 +1403,47 @@ def display_embedded_directions_for_all_organizations(raw_data, user_query="", a
                     # Try to geocode this address
                     lat, lon = geocode_address(full_address, org_name)
                     if lat is not None and lon is not None:
-                        org_options.append(org_name)
+                        # Create numbered display format
+                        display_name = f"{org_number}. {org_name}"
+                        
+                        org_options.append(display_name)
+                        org_name_to_display[org_name] = display_name
                         org_data[org_name] = {
                             'lat': lat,
                             'lon': lon,
                             'address': full_address,
-                            'record': record
+                            'record': record,
+                            'display_name': display_name
                         }
+                        
+                        org_number += 1  # Increment counter
         
         if not org_options:
             st.warning("No organizations with valid addresses found for directions.")
             return
         
-        # Create the main directions interface
-        st.markdown("### Directions to")
+        # DROPDOWN SELECTOR - SYNCED with checkboxes via shared selection_key
+        # Determine the default index based on current selection
+        default_index = 0
+        current_selection = st.session_state.get(selection_key)
         
-        # Organization selector dropdown with unique key
-        selected_org = st.selectbox(
-            "Select destination:",
-            options=org_options,
-            index=0,
-            key=f"destination_selector{key_suffix}",
-            label_visibility="collapsed"
-        )
+        # Find the display name for current selection
+        if current_selection:
+            if current_selection in org_name_to_display:
+                # Current selection is actual org name, get its display format
+                display_selection = org_name_to_display[current_selection]
+                if display_selection in org_options:
+                    default_index = org_options.index(display_selection)
+            elif current_selection in org_options:
+                # Current selection is already in display format
+                default_index = org_options.index(current_selection)
+        
+        # Extract actual org name from display format (remove "1. " prefix)
+        if org_options:
+            selected_display = org_options[default_index]
+            selected_org = selected_display.split(". ", 1)[1] if ". " in selected_display else selected_display
+        else:
+            selected_org = None
         
         if selected_org and selected_org in org_data:
             org_info = org_data[selected_org]
@@ -1124,13 +1452,18 @@ def display_embedded_directions_for_all_organizations(raw_data, user_query="", a
             # Determine what to show in the text input placeholder and value
             default_location_text = ""
             placeholder_text = "e.g., 1234 Market Street, Philadelphia"
-            
+
             # Priority-based location text for input field
-            if 'custom_start_location' in st.session_state and st.session_state.custom_start_location:
-                # Custom location set by user
-                custom_lat, custom_lon = st.session_state.custom_start_location
-                default_location_text = st.session_state.get('custom_start_location_name', f"Custom ({custom_lat:.4f}, {custom_lon:.4f})")
+            if custom_location_key in st.session_state and st.session_state[custom_location_key]:
+                # THIS LEG has a custom location
+                custom_lat, custom_lon = st.session_state[custom_location_key]
+                default_location_text = st.session_state.get(custom_location_name_key, f"Custom ({custom_lat:.4f}, {custom_lon:.4f})")
                 placeholder_text = f"Custom location: {default_location_text}"
+            elif start_coordinates and start_coordinates != st.session_state.get('user_location'):
+                # Using optimized routing coordinates (from previous stop)
+                start_lat, start_lon = start_coordinates
+                default_location_text = f"Previous Stop ({start_lat:.4f}, {start_lon:.4f})"
+                placeholder_text = f"Starting from previous stop: {start_lat:.4f}, {start_lon:.4f}"
             elif 'user_location' in st.session_state and st.session_state.user_location:
                 # User's actual location is available
                 user_lat, user_lon = st.session_state.user_location
@@ -1142,7 +1475,7 @@ def display_embedded_directions_for_all_organizations(raw_data, user_query="", a
                 placeholder_text = f"From query: {st.session_state.query_location_text}"
 
             
-            # Simple starting location input - full width
+            # ===== STARTING LOCATION (TOP) =====
             col1, col2 = st.columns([4, 1])
             with col1:
                 # Show different help text based on what location we're using
@@ -1151,7 +1484,7 @@ def display_embedded_directions_for_all_organizations(raw_data, user_query="", a
                     help_text = "Using your actual location. You can override this with a custom address."
                 
                 custom_address = st.text_input(
-                    "Starting location:",
+                    "○ Starting location:",
                     value=default_location_text,
                     placeholder=placeholder_text,
                     key=f"start_location_all_orgs{key_suffix}",
@@ -1164,55 +1497,60 @@ def display_embedded_directions_for_all_organizations(raw_data, user_query="", a
                 button_text = "Update" if default_location_text else "Set Location"
                 set_location = st.button(button_text, key=f"set_start_all_orgs{key_suffix}", use_container_width=True)
             
-            # Handle location setting/updating
+            # Handle location update button
             if set_location and custom_address:
-                # Don't geocode if user is trying to use the same location that's already set
-                current_user_loc = st.session_state.get('user_location')
-                if current_user_loc and custom_address.startswith("My Location"):
-                    st.info("✅ Already using your current location for directions.")
-                else:
-                    with st.spinner("Finding location..."):
-                        start_lat, start_lon, full_address = geocode_start_location(custom_address)
-                        
-                        if start_lat and start_lon:
-                            st.session_state.custom_start_location = (start_lat, start_lon)
-                            st.session_state.custom_start_location_name = full_address or custom_address
-                            logging.info(f"Custom start location set: {full_address or custom_address} ({start_lat}, {start_lon})")
-                            st.success(f"✅ Starting point updated to: {full_address or custom_address}")
-                            st.rerun()
-                        else:
-                            st.error("⚠ Could not find that address. Please try a different format.")
-            elif set_location and not custom_address:
-                st.warning("Please enter an address first.")
+                with st.spinner("Processing location..."):
+                    start_lat, start_lon, full_address = geocode_start_location(custom_address)
+                    
+                    if start_lat and start_lon:
+                        # Store in leg-specific session state keys
+                        st.session_state[custom_location_key] = (start_lat, start_lon)
+                        st.session_state[custom_location_name_key] = full_address or custom_address
+                        logging.info(f"Custom start location set for leg {key_suffix}: {full_address or custom_address}")
+                        st.rerun()
+                    else:
+                        st.error("Could not find that location. Please try a different address or coordinates.")
+                        logging.error(f"Failed to geocode: {custom_address}")
+
+            # ===== DESTINATION (BELOW STARTING LOCATION) =====
+            selected_display_new = st.selectbox(
+                "⚑ Destination:",  # This is the pin/map marker
+                options=org_options,
+                index=default_index,
+                key=f"dropdown_{selection_key}",
+                label_visibility="visible"
+            )
             
-            # Show clear indication of which location is being used for directions
-            current_start_lat, current_start_lon = get_user_location_for_directions()
-            location_source = "City Hall (default)"
-            if 'custom_start_location' in st.session_state and st.session_state.custom_start_location == (current_start_lat, current_start_lon):
-                location_source = "Custom location"
-            elif 'user_location' in st.session_state and st.session_state.user_location == (current_start_lat, current_start_lon):
-                location_source = "Your actual location"
-            elif 'query_location' in st.session_state and st.session_state.query_location == (current_start_lat, current_start_lon):
-                location_source = "Query location"
+            # Extract actual org name from display format (remove "1. " prefix)
+            selected_org_new = selected_display_new.split(". ", 1)[1] if ". " in selected_display_new else selected_display_new
             
-            # Get user location for directions
-            user_lat, user_lon = get_user_location_for_directions()
+            # SYNC: Update shared selection if dropdown changed
+            if selected_org_new != st.session_state.get(selection_key):
+                st.session_state[selection_key] = selected_org_new
+                st.rerun()
+            
+            # Use the newly selected org if it changed
+            if selected_org_new in org_data:
+                selected_org = selected_org_new
+                org_info = org_data[selected_org]
+                lat, lon = org_info['lat'], org_info['lon']
+
+            # Get user location for directions (after potential update)
+            user_lat, user_lon = get_user_location_for_directions(start_coordinates, leg_key_suffix=key_suffix)
             
             # Transportation mode selector (simplified) with unique keys
             col1, col2, col3, col4 = st.columns(4)
-            
+
             with col1:
-                walking = st.button("🚶🏽 Walking", key=f"walking_all_orgs{key_suffix}", use_container_width=True)
-            with col2:
                 driving = st.button("🚗 Driving", key=f"driving_all_orgs{key_suffix}", use_container_width=True)
+            with col2:
+                walking = st.button("🚶🏽 Walking", key=f"walking_all_orgs{key_suffix}", use_container_width=True)
             with col3:
                 cycling = st.button("🚴‍♀️ Cycling", key=f"cycling_all_orgs{key_suffix}", use_container_width=True)
             with col4:
-                transit = st.button("🚌 Transit", key=f"transit_all_orgs{key_suffix}", use_container_width=True)
+                transit = st.button("🚆 Transit", key=f"transit_all_orgs{key_suffix}", use_container_width=True)
 
             # Determine transportation mode
-            transport_mode = "walking"  # Default to walking
-            
             if driving:
                 transport_mode = "driving"
                 st.session_state["global_transport_mode"] = "driving"
@@ -1226,10 +1564,10 @@ def display_embedded_directions_for_all_organizations(raw_data, user_query="", a
                 transport_mode = "walking"
                 st.session_state["global_transport_mode"] = "walking"
             else:
-                # Check if we have a saved global mode
-                saved_mode = st.session_state.get("global_transport_mode", "walking")
-                transport_mode = saved_mode
-            
+                # Check if we have a saved global mode, default to driving
+                transport_mode = st.session_state.get("global_transport_mode", "driving")
+
+
             # Create directions embed URL with transportation mode
             google_api_key = getattr(Config, 'GOOGLE_MAPS_API_KEY', None)
             
@@ -1256,7 +1594,7 @@ def display_embedded_directions_for_all_organizations(raw_data, user_query="", a
                 </div>
                 """, unsafe_allow_html=True)
                 
-                # Embed Street View right after the map using your exact format
+                # Embed Street View
                 street_view_embed_url = f"https://www.google.com/maps/embed?pb=!1m0!4v1723910100000!6m8!1m7!1sCAoSLEFGMVFpcE5fU3lzY1Z3b1hXZ2ZkR0hGd2VnU0Z1dHlJZ1F4b2Z0b2J3!2m2!1d{lat}!2d{lon}!3f75!4f0!5f0.78"
                 
                 st.components.v1.html(
@@ -1302,14 +1640,7 @@ def display_embedded_directions_for_all_organizations(raw_data, user_query="", a
             
     except Exception as e:
         st.error(f"Error displaying directions: {e}")
-        
-        # Emergency fallback
-        st.markdown(f"""
-        <div style="padding: 20px; background-color: #f0f2f6; border-radius: 8px; text-align: center;">
-            <h4>Organizations Found</h4>
-            <p>Unable to display directions. Please try refreshing.</p>
-        </div>
-        """, unsafe_allow_html=True)
+        logging.error(f"Directions error: {str(e)}")
 
 # --- Geocoding Function with Caching ---
 @st.cache_data
@@ -1317,7 +1648,7 @@ def geocode_address(address, org_name=None):
     """Converts an address string into latitude and longitude."""
     try:
         geolocator = Nominatim(user_agent="dream_kg_map_app_v2", timeout=10)
-        time.sleep(2)  # Increased delay to avoid rate limiting
+        time.sleep(1.5)  # Increased delay to avoid rate limiting
         
         # Try the full address first
         location = geolocator.geocode(address)
@@ -1353,6 +1684,10 @@ def geocode_address(address, org_name=None):
 if "messages" not in st.session_state:
     st.session_state.messages = []
 
+# Initialize default transport mode to driving
+if "global_transport_mode" not in st.session_state:
+    st.session_state.global_transport_mode = "driving"
+
 # Check for location data using simplified method - no auto-reload
 def check_and_store_location():
     """Check for location data from JavaScript and store it in session state - no refresh loops."""
@@ -1385,10 +1720,38 @@ if 'user_location' in st.session_state and 'location_session_logged' not in st.s
 # Display previous messages and directions from history
 for idx, message in enumerate(st.session_state.messages):
     with st.chat_message(message["role"]):
-        display_structured_response(message["content"])
-        # For historical messages, check if we have raw data to display directions
-        if message.get("raw_data"):
-            display_embedded_directions_for_all_organizations(message["raw_data"], "", app, message_index=idx)
+        # Get the original query for this message
+        original_query = message.get("original_query", "")
+        
+        # Check if multi-category message
+        if isinstance(message["content"], dict) and message["content"].get("type") == "multi_category_complete":
+            for cat_idx, cat_data in enumerate(message["content"]["categories"], 1):
+                category = cat_data['category']
+                services = cat_data['services']
+                response = cat_data['response']
+                raw_data = cat_data['raw_data']
+                
+                st.markdown(f"<span style='font-size: 24px;'><strong>Stop {cat_idx}: {category}</strong></span>", unsafe_allow_html=True)
+                st.write("")
+                
+                display_structured_response(
+                    response,
+                    raw_data=raw_data,
+                    user_query=original_query,
+                    app_instance=app,
+                    message_index=f"{idx}_{cat_idx}",
+                    start_coordinates=cat_data.get('start_coordinates'),
+                    all_categories_data=message["content"]["categories"],
+                    current_category_index=cat_idx
+                )
+                
+                st.write("")
+        else:
+            # Regular message
+            display_structured_response(
+                message["content"],
+                user_query=original_query  # ADD THIS
+            )
 
 # --- Log Download Function ---
 def display_log_download_button(app_instance):
@@ -1416,7 +1779,30 @@ def display_log_download_button(app_instance):
 if app:
     if prompt := st.chat_input("What are you looking for, where, and when?"):
         
-        # --- Clear previous location settings for a fresh query ---
+        # ============================================================================
+        # EXTRACT TIME CONTEXT FIRST - Before any flow decisions
+        # ============================================================================
+        time_context = ""
+        days_of_week = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday']
+        prompt_lower = prompt.lower()
+        
+        # Check for specific day mentions
+        for day in days_of_week:
+            if day in prompt_lower:
+                time_context = f" on {day.capitalize()}"
+                logging.info(f"Extracted time context from query: '{day}'")
+                break
+        
+        # If no specific day, check for general time indicators
+        if not time_context:
+            time_indicators = ['hour', 'hours', 'open', 'close', 'closing', 'opening', 'time', 'weekday', 'weekend']
+            if any(indicator in prompt_lower for indicator in time_indicators):
+                time_context = " (user asking about hours)"
+                logging.info(f"Detected time-related query")
+        
+        # ============================================================================
+        # Clear previous location settings for fresh query
+        # ============================================================================
         if 'custom_start_location' in st.session_state:
             del st.session_state['custom_start_location']
         if 'custom_start_location_name' in st.session_state:
@@ -1427,115 +1813,224 @@ if app:
             del st.session_state['query_location_name']
         if 'query_location_text' in st.session_state:
             del st.session_state['query_location_text']
-        # --- End of clearing location settings ---
         
+        # Add user message
         st.session_state.messages.append({"role": "user", "content": prompt})
         with st.chat_message("user"):
             st.markdown(prompt)
 
         with st.chat_message("assistant"):
-            location_coords = None
-            location_org = None
-            has_location = False
+            # Get user location
+            user_location = st.session_state.get('user_location')
             
-            with st.spinner("Thinking..."):
-                # Get user location from session state if available
-                user_location = st.session_state.get('user_location')
+            # STEP 1: Categorize services by organization category
+            categorized_services = app.query_service.categorize_services_by_category(prompt)
+            
+            if not categorized_services:
+                # ====================================================================
+                # SINGLE CATEGORY FLOW - Apply time context here too
+                # ====================================================================
+                logging.info("No specific categories detected - using original flow")
                 
-                # Process query with location information
-                response, raw_data = app.process_user_request_for_streamlit(prompt, user_location)
+                # Create query with time context if available
+                query_with_time = prompt + time_context if time_context else prompt
+                logging.info(f"Single-category query with time context: {query_with_time}")
+                
+                with st.spinner("Searching..."):
+                    response, raw_data = app.process_user_request_for_streamlit(query_with_time, user_location)
+                    
+                    try:
+                        app.log_session_to_sheets()
+                    except Exception as e:
+                        logging.warning(f"Google Sheets logging failed: {str(e)}")
+                
+                display_structured_response(response)
 
-                # --- AUTOMATIC GOOGLE SHEETS LOGGING ---
-                try:
-                    app.log_session_to_sheets()
-                    logging.info("Session automatically logged to Google Sheets")
-                except Exception as e:
-                    logging.warning(f"Automatic Google Sheets logging failed: {str(e)}")
+                st.session_state.messages.append({
+                    "role": "assistant",
+                    "content": response,
+                    "raw_data": raw_data,
+                    "original_query": prompt
+                })
+            
+            else:
+                # ====================================================================
+                # MULTI-CATEGORY FLOW - Time context already extracted above
+                # ====================================================================
+                logging.info(f"Processing {len(categorized_services)} categories: {list(categorized_services.keys())}")
                 
-                # --- LOCATION DETECTION LOGIC ---
-                if raw_data and response:
-                    # Find the first organization with valid coordinates
-                    for record in raw_data:
-                        # Get organization name from different possible formats
-                        org_name = (
-                            record.get('o.name') or 
-                            record.get('name') or 
-                            record.get('organizationName') or 
-                            (record.get('org', {}).get('name') if isinstance(record.get('org'), dict) else record.get('org')) or
-                            (record.get('o', {}).get('name') if isinstance(record.get('o'), dict) else record.get('o'))
+                all_category_responses = []
+                all_raw_data = []
+                
+                # Initialize with user's location for first stop
+                search_coordinates = user_location
+                previous_results = None
+                last_successful_coordinates = user_location
+                
+                for cat_idx, (category, services) in enumerate(categorized_services.items(), 1):
+
+                    # LOG ORIGINAL USER QUERY
+                    if cat_idx == 1:
+                        logging.info(f"\n{'='*70}")
+                        logging.info(f"ORIGINAL USER QUERY: {prompt}")
+                        logging.info(f"EXTRACTED TIME CONTEXT: {time_context}")
+                        logging.info(f"{'='*70}\n")
+                    
+                    # FIRST LEG: Apply intended location logic
+                    if cat_idx == 1:
+                        is_personal_location = app._is_personal_location_query(prompt)
+                        
+                        if is_personal_location:
+                            # Personal location queries use user's location for search AND map
+                            if user_location:
+                                search_coordinates = user_location
+                                map_start_coordinates = user_location
+                                logging.info(f"First leg (personal location): Using user location for search AND map: {user_location}")
+                            else:
+                                search_coordinates = (39.952335, -75.163789)
+                                map_start_coordinates = (39.952335, -75.163789)
+                                logging.info(f"First leg (personal location, no permission): Using City Hall for search AND map")
+                        else:
+                            # Specific location mentioned
+                            has_specific_location = app.spatial_intel.extract_location_from_query(prompt)
+                            
+                            if has_specific_location:
+                                # Search based on mentioned location, map starts from user location
+                                specific_coords = app.spatial_intel.geocode_location(has_specific_location)
+                                search_coordinates = specific_coords if specific_coords else (39.952335, -75.163789)
+                                map_start_coordinates = user_location if user_location else (39.952335, -75.163789)
+                                logging.info(f"First leg (specific location '{has_specific_location}'): Search from {search_coordinates}, map from {map_start_coordinates}")
+                            else:
+                                # No location mentioned - use user location for both
+                                search_coordinates = user_location if user_location else (39.952335, -75.163789)
+                                map_start_coordinates = search_coordinates
+                                logging.info(f"First leg (no location): Using {search_coordinates} for search AND map")
+                        
+                        last_successful_coordinates = search_coordinates
+                    
+                    # SUBSEQUENT LEGS: Use optimized routing
+                    elif previous_results and len(previous_results) > 0:
+                        first_result = previous_results[0]
+                        prev_lat = (first_result.get('l.latitude') or first_result.get('latitude'))
+                        prev_lon = (first_result.get('l.longitude') or first_result.get('longitude'))
+                        
+                        if prev_lat and prev_lon:
+                            search_coordinates = (float(prev_lat), float(prev_lon))
+                            map_start_coordinates = search_coordinates
+                            last_successful_coordinates = search_coordinates
+                            prev_org_name = (first_result.get('o.name') or first_result.get('name') or 'previous location')
+                            logging.info(f"Leg {cat_idx} (optimized): Search AND map from '{prev_org_name}' at {search_coordinates}")
+                        else:
+                            search_coordinates = last_successful_coordinates
+                            map_start_coordinates = last_successful_coordinates
+                            logging.warning(f"Leg {cat_idx}: Using last successful coordinates: {last_successful_coordinates}")
+                    else:
+                        search_coordinates = user_location if user_location else (39.952335, -75.163789)
+                        map_start_coordinates = search_coordinates
+                        logging.info(f"Leg {cat_idx}: Fallback to {search_coordinates}")
+                    
+                    logging.info(f"\n{'='*70}")
+                    logging.info(f"CATEGORY LOOP {cat_idx}/{len(categorized_services)}: {category}")
+                    logging.info(f"Services in this category: {services}")
+                    logging.info(f"Search starting coordinates: {search_coordinates}")
+                    logging.info(f"{'='*70}\n")
+                    
+                    # Create category-specific query with time context
+                    services_text = " and ".join(services)
+                    category_query = f"organizations in {category} category that offer {services_text}{time_context}"
+                    logging.info(f"Category query with time context: {category_query}")
+                    
+                    # Run flow with optimized coordinates
+                    with st.spinner(f"Searching {category} for {services_text}..."):
+                        # Use process_query_with_coordinates with optimized starting point
+                        query_result = app.query_service.process_query_with_coordinates(category_query, search_coordinates)
+                        
+                        # Generate response - PASS THE ORIGINAL PROMPT, NOT category_query
+                        response_result = app.response_service.generate_response(
+                            prompt,  # Use original user query
+                            query_result['results'],
+                            is_spatial=True,
+                            is_focused=False
                         )
                         
-                        # Only proceed if we have an organization name and it's mentioned in the response
-                        if org_name and org_name in response:
-                            # Try to get address information
-                            address = (
-                                record.get('l.street') or 
-                                record.get('street') or 
-                                record.get('streetAddress') or 
-                                record.get('address')
-                            )
-                            
-                            city = (
-                                record.get('l.city') or 
-                                record.get('city') or
-                                'Philadelphia'  # Default city
-                            )
-                            
-                            state = (
-                                record.get('l.state') or 
-                                record.get('state') or 
-                                'PA'  # Default state
-                            )
-                            
-                            zipcode = (
-                                record.get('l.zipcode') or 
-                                record.get('zipcode') or 
-                                record.get('zipCode') or 
-                                ''
-                            )
-                            
-                            if address:
-                                # Build full address
-                                full_address = f"{address}"
-                                if city:
-                                    full_address += f", {city}"
-                                if state:
-                                    full_address += f", {state}"
-                                if zipcode:
-                                    full_address += f" {zipcode}"
-                                
-                                full_address = full_address.strip()
-                                
-                                # Try to geocode this address
-                                lat, lon = geocode_address(full_address, org_name)
-                                if lat is not None and lon is not None:
-                                    location_coords = [lat, lon]
-                                    location_org = org_name
-                                    has_location = True
-                                    break  # Found the first valid coordinates, stop looking
+                        response = response_result['response']
+                        raw_data = query_result['results']
 
-                # --- END OF LOCATION DETECTION LOGIC ---
+                        # Log session metrics to file
+                        app.metrics.log_statistics_to_file()
 
-                display_structured_response(response)
+                        # Log to Google Sheets
+                        try:
+                            app.log_session_to_sheets()
+                            logging.info(f"Session logged for category: {category}")
+                        except Exception as e:
+                            logging.warning(f"Google Sheets logging failed: {str(e)}")
+                    
+                    # Store for history FIRST
+                    all_category_responses.append({
+                        'category': category,
+                        'services': services,
+                        'response': response,
+                        'raw_data': raw_data,
+                        'start_coordinates': map_start_coordinates
+                    })
+                    all_raw_data.extend(raw_data if raw_data else [])
+
+                    # Only update previous_results if we got results
+                    if raw_data and len(raw_data) > 0:
+                        previous_results = raw_data
+                        logging.info(f"Stored {len(raw_data)} results for next iteration")
+                    else:
+                        logging.info(f"No results to store. Next iteration will use last successful coordinates: {last_successful_coordinates}")
+                    
+                    # Separator between categories (except last one)
+                    if cat_idx < len(categorized_services):
+                        st.write("")
+                    
+                    logging.info(f"Completed {category} category loop\n")
                 
-                # Display embedded directions for all organizations if available (current message)
-                if raw_data:
-                    current_message_index = len(st.session_state.messages)  # Use next index for current message
-                    display_embedded_directions_for_all_organizations(raw_data, prompt, app, message_index=current_message_index)
-
-        st.session_state.messages.append({
-            "role": "assistant", 
-            "content": response,
-            "raw_data": raw_data  # Store raw data for directions
-        })
-    
-    # Display log download button at the end of chat if there are messages
-    if st.session_state.messages:
-        display_log_download_button(app)
-        
+                # STEP 4: Save to session history
+                st.session_state.messages.append({
+                    "role": "assistant",
+                    "content": {
+                        "type": "multi_category_complete",
+                        "categories": all_category_responses
+                    },
+                    "raw_data": all_raw_data,
+                    "original_query": prompt
+                })
+                
+                # STEP 5: Display all categories NOW (after saving)
+                for cat_idx, cat_data in enumerate(all_category_responses, 1):
+                    category = cat_data['category']
+                    response = cat_data['response']
+                    raw_data = cat_data['raw_data']
+                    
+                    st.markdown(f"<span style='font-size: 24px;'><strong>Stop {cat_idx}: {category}</strong></span>", unsafe_allow_html=True)
+                    st.write("")
+                    
+                    current_message_index = len(st.session_state.messages) - 1
+                    
+                    display_structured_response(
+                        response, 
+                        raw_data=raw_data,
+                        user_query=prompt,
+                        app_instance=app,
+                        message_index=f"{current_message_index}_{cat_idx}",
+                        start_coordinates=cat_data.get('start_coordinates'),
+                        all_categories_data=all_category_responses,
+                        current_category_index=cat_idx
+                    )
+                    
+                    if cat_idx < len(all_category_responses):
+                        st.write("")
+                            
 else:
     st.warning("Application is not available due to an initialization error.")
 
+# Download button - outside all conditional blocks
+if app and st.session_state.messages:
+    display_log_download_button(app)
 
 def main():
     """Main entry point for the Streamlit application."""

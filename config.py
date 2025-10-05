@@ -1,11 +1,11 @@
-# ==============================================================================
-# UPDATED config.py - Add Google Maps API Key
-# ==============================================================================
-
 import os
 import logging
 from datetime import datetime
 import streamlit as st
+
+# ==============================================================================
+# Environment Variables
+# ==============================================================================
 
 # Load from Streamlit secrets
 os.environ["NEO4J_URI"] = st.secrets["NEO4J_URI"]
@@ -25,9 +25,6 @@ class Config:
     LLM_MODEL = "openai/gpt-oss-120b"
     LLM_TEMPERATURE = 2
 
-    # Google Maps Configuration - ADD THIS
-    GOOGLE_MAPS_API_KEY = st.secrets.get("GOOGLE_MAPS_API_KEY", None)
-
     # Google Sheets Configuration
     GOOGLE_SHEET_NAME = "DreamKGLogs"
     GOOGLE_WORKSHEET_NAME = "Session_Logs" 
@@ -37,8 +34,8 @@ class Config:
     
     # Spatial Intelligence Configuration
     GEOCODING_TIMEOUT = 10
-    DEFAULT_DISTANCE_THRESHOLD = 0.8 # miles
-    EXPANDED_DISTANCE_THRESHOLD = 1.25  # miles
+    DEFAULT_DISTANCE_THRESHOLD =  0.8 # miles
+    EXPANDED_DISTANCE_THRESHOLD = 1.1  # miles
     
     # Proximity thresholds in miles
     PROXIMITY_THRESHOLDS = {
@@ -75,32 +72,468 @@ class Config:
         'blocks', 'vicinity', 'area', 'location', 'from', 'to'
     ]
     
-    # Logging Configuration
-    LOG_DIRECTORY = "./logs/"
-    LOG_FORMAT = '%(asctime)s - %(levelname)s - %(message)s'
-    LOG_LEVEL = logging.INFO
     
-    @classmethod
-    def setup_logging(cls):
-        import os
-        import uuid
-        os.makedirs(cls.LOG_DIRECTORY, exist_ok=True)
+    @staticmethod
+    def setup_logging_with_session_id(session_id):
+        """Setup logging with session-specific log files using date and time."""
+
+        # Logging Configuration
+        LOG_DIRECTORY = "./logs/"
+        LOG_FORMAT = '%(asctime)s - %(levelname)s - %(message)s'
+        LOG_LEVEL = logging.INFO
+
+        # Create directory if it doesn't exist
+        os.makedirs(LOG_DIRECTORY, exist_ok=True)
         
-        # Use UUID + timestamp for guaranteed uniqueness
-        timestamp = datetime.now().strftime("%Y-%m-%d_%H-%M-%S-%f")[:-3]  # Include microseconds
-        unique_id = str(uuid.uuid4())[:8]
-        log_filename = f"{cls.LOG_DIRECTORY}{timestamp}_{unique_id}_app.log"
+        # Use date and time for the session filename
+        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+        log_filename = os.path.join(LOG_DIRECTORY, f"dreamkg_session_{timestamp}.log")
         
         logging.basicConfig(
-            level=cls.LOG_LEVEL,
-            format=cls.LOG_FORMAT,
+            level=logging.INFO,
+            format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
             handlers=[
-                logging.FileHandler(log_filename)
+                logging.FileHandler(log_filename),  # ← WRITES TO FILE (same as before)            ]
             ]
         )
-        
         return log_filename
     
+    # Category order for multi-category queries
+    CATEGORY_ORDER = [
+        "Food Bank",
+        "Library", 
+        "Social Security Office",
+        "Mental Health",
+        "Temporary Shelter"
+    ]
+    
+    # Service to Category mapping for short answers
+    CATEGORY_SERVICES = {
+        "Food Bank": [
+            "12-step",
+            "addiction & recovery",
+            "advocacy & legal aid",
+            "after school care",
+            "anger management",
+            "baby supplies",
+            "bereavement",
+            "breakfast",
+            "case management",
+            "clothing",
+            "community support services",
+            "computer or internet access",
+            "counseling",
+            "day camp",
+            "detox",
+            "dining",
+            "dinner",
+            "disaster response",
+            "drug testing",
+            "emergency food",
+            "family counseling",
+            "financial education",
+            "food",
+            "food delivery",
+            "food pantry",
+            "group therapy",
+            "health education",
+            "help find housing",
+            "help find work",
+            "home goods",
+            "housing advice",
+            "individual counseling",
+            "lunch",
+            "meal",
+            "meals",
+            "medical care",
+            "mental health care",
+            "mental health evaluation",
+            "navigating the system",
+            "nutrition",
+            "nutrition education",
+            "one-on-one support",
+            "outpatient treatment",
+            "parenting education",
+            "peer support",
+            "personal care items",
+            "personal hygiene",
+            "recreation",
+            "residential housing",
+            "residential treatment",
+            "safe housing",
+            "short-term housing",
+            "skills & training",
+            "sober living",
+            "spiritual support",
+            "substance abuse counseling",
+            "support network",
+            "toys & gifts",
+            "understand mental health",
+            "virtual support"
+        ],
+        
+        "Library": [
+            "accessibility",
+            "adult basic literacy",
+            "adult education",
+            "after school",
+            "after school care",
+            "after-school",
+            "after-school programs",
+            "archives",
+            "arts",
+            "audio",
+            "audio/braille/large print books",
+            "audiobooks",
+            "author events",
+            "author events & talks",
+            "author talks",
+            "basic literacy",
+            "bathroom",
+            "board games",
+            "book",
+            "book drop",
+            "books",
+            "braille",
+            "chess",
+            "chess club",
+            "children",
+            "children's library & department",
+            "chinese",
+            "chinese-language collection",
+            "citizenship",
+            "citizenship class",
+            "class",
+            "classes",
+            "coding",
+            "collection",
+            "community programs",
+            "community support",
+            "computer",
+            "computer access",
+            "computer class",
+            "computer labs",
+            "computer or internet access",
+            "computer/sketch/health classes",
+            "computers",
+            "conference",
+            "cooking",
+            "cooking classes",
+            "copies",
+            "copier",
+            "copy",
+            "copying",
+            "culinary",
+            "day camp",
+            "delivery",
+            "disease screening",
+            "drop box",
+            "drop off",
+            "education",
+            "employment",
+            "engineering",
+            "english conversation groups",
+            "esl",
+            "event",
+            "events",
+            "exhibitions",
+            "facilities",
+            "film",
+            "foreign",
+            "foreign film",
+            "foreign film/language collections",
+            "game",
+            "games",
+            "gaming",
+            "gaming events",
+            "ged",
+            "ged & literacy classes",
+            "guided tours",
+            "health",
+            "health classes",
+            "health education",
+            "help find work",
+            "homework",
+            "homework help",
+            "internet",
+            "job",
+            "job & workforce development support",
+            "job assistance",
+            "job readiness",
+            "job search",
+            "kids programs",
+            "language collection",
+            "large collection",
+            "large print",
+            "learning",
+            "literacy",
+            "mail",
+            "math",
+            "medical care",
+            "meeting",
+            "meeting room",
+            "meeting rooms",
+            "meeting rooms & spaces",
+            "meeting space",
+            "movies",
+            "multilingual",
+            "museum access",
+            "music",
+            "music classes",
+            "music/coding classes",
+            "new americans",
+            "one-on-one assistance",
+            "parenting education",
+            "playback equipment",
+            "postage",
+            "postage-free mail delivery",
+            "print",
+            "printer",
+            "printing",
+            "programming",
+            "programs",
+            "public computers",
+            "public computers & lab access",
+            "public restrooms",
+            "quiet space",
+            "reading courses",
+            "research",
+            "research library",
+            "resume development",
+            "restroom",
+            "restrooms",
+            "return",
+            "scan",
+            "scanner",
+            "scanners",
+            "scanning",
+            "scanning & scanners",
+            "science",
+            "services for new americans",
+            "sex education",
+            "shipping",
+            "social services",
+            "social services support",
+            "social support",
+            "spanish",
+            "special",
+            "special collections",
+            "stem",
+            "stem classes & workshops",
+            "story",
+            "story time",
+            "story times",
+            "storytime",
+            "study",
+            "study room",
+            "study rooms",
+            "summer",
+            "summer learning",
+            "summer learning programs",
+            "summer programs",
+            "technology",
+            "tour",
+            "tours",
+            "tutoring",
+            "video",
+            "wellness",
+            "wi-fi",
+            "wifi",
+            "wireless",
+            "workforce development",
+            "workshop",
+            "workshops",
+            "youth programs"
+        ],
+        
+        "Mental Health": [
+            "12-step",
+            "addiction",
+            "addiction & recovery",
+            "anger management",
+            "bereavement",
+            "case management",
+            "checkup & test",
+            "community support services",
+            "counseling",
+            "daily life skills",
+            "detox",
+            "disease screening",
+            "drug testing",
+            "family counseling",
+            "government benefits",
+            "group therapy",
+            "health education",
+            "help hotlines",
+            "individual counseling",
+            "long-term housing",
+            "medical care",
+            "medication management",
+            "medications for addiction",
+            "medications for mental health",
+            "mental health",
+            "mental health care",
+            "mental health evaluation",
+            "navigating the system",
+            "one-on-one support",
+            "outpatient treatment",
+            "parenting education",
+            "peer recovery coaching",
+            "peer support",
+            "prescription assistance",
+            "prevent & treat",
+            "psychiatric",
+            "psychiatric emergency services",
+            "recovery",
+            "residential care",
+            "residential housing",
+            "residential treatment",
+            "safe housing",
+            "short-term housing",
+            "sober living",
+            "specialized therapy",
+            "spiritual support",
+            "substance abuse",
+            "substance abuse counseling",
+            "support groups",
+            "support network",
+            "therapy",
+            "understand mental health",
+            "virtual support"
+        ],
+        
+        "Social Security Office": [
+            "1099",
+            "address",
+            "appeal",
+            "appeal a decision",
+            "appealing",
+            "appeals",
+            "application",
+            "applications",
+            "apply",
+            "apply for",
+            "apply for benefits",
+            "applying",
+            "atm",
+            "atm withdrawals",
+            "benefit",
+            "benefits",
+            "calculation",
+            "calculator",
+            "calculating",
+            "card replacement",
+            "cash",
+            "challenge",
+            "challenging",
+            "change",
+            "change address",
+            "change direct deposit",
+            "changing",
+            "decision",
+            "deposit",
+            "direct deposit",
+            "direct deposit information",
+            "disability",
+            "dispute",
+            "disputing",
+            "earnings",
+            "estimate",
+            "estimates",
+            "filing",
+            "funds transfer",
+            "get benefit estimates",
+            "get replacement 1099",
+            "history",
+            "international",
+            "international transactions",
+            "medicare",
+            "modify",
+            "money transfer",
+            "overnight card delivery",
+            "overseas",
+            "paper statements",
+            "print proof",
+            "print proof of benefits",
+            "proof",
+            "replacement 1099",
+            "request replacement social security card",
+            "requesting",
+            "retirement",
+            "review earnings",
+            "review earnings history",
+            "social security",
+            "ssi",
+            "statement",
+            "statements",
+            "transfer",
+            "update",
+            "update address",
+            "updating",
+            "withdrawal"
+        ],
+        
+        "Temporary Shelter": [
+            "stay",
+            "addiction & recovery",
+            "advocacy & legal aid",
+            "case management",
+            "clothes",
+            "clothing",
+            "community support services",
+            "computer class",
+            "computer or internet access",
+            "counseling",
+            "daily life skills",
+            "disaster response",
+            "disease screening",
+            "emergency food",
+            "emergency payments",
+            "exercise & fitness",
+            "financial assistance",
+            "financial education",
+            "food pantry",
+            "government benefits",
+            "health education",
+            "help find healthcare",
+            "help find housing",
+            "help find school",
+            "help find work",
+            "help pay for housing",
+            "help pay for utilities",
+            "home goods",
+            "housing",
+            "hygiene",
+            "meals",
+            "medical care",
+            "mental health care",
+            "more education",
+            "navigating the system",
+            "one-on-one support",
+            "parenting education",
+            "personal care",
+            "personal hygiene",
+            "physical safety",
+            "prevent & treat",
+            "recreation",
+            "residential housing",
+            "restroom",
+            "resume development",
+            "safe housing",
+            "screening & exams",
+            "sex education",
+            "shelter",
+            "short-term housing",
+            "skilled nursing",
+            "skills & training",
+            "spiritual support",
+            "substance abuse counseling",
+            "support network",
+            "temporary shelter",
+            "weather relief"
+        ]
+    }
+
     @classmethod
     def validate_config(cls):
         """Validate that all required configuration is present."""
@@ -118,64 +551,3 @@ class Config:
             raise ValueError(f"Missing required environment variables: {', '.join(missing_vars)}")
         
         return True
-    
-    @classmethod
-    def setup_logging_with_session_id(cls, session_id):
-        """Setup logging with guaranteed unique filename per session."""
-        import os
-        import uuid
-        from datetime import datetime
-        
-        os.makedirs(cls.LOG_DIRECTORY, exist_ok=True)
-        
-        # Use session ID + timestamp + random component for absolute uniqueness
-        timestamp = datetime.now().strftime("%Y-%m-%d_%H-%M-%S-%f")[:-3]
-        random_component = str(uuid.uuid4())[:8]
-        log_filename = f"{cls.LOG_DIRECTORY}{timestamp}_{session_id}_{random_component}_app.log"
-        
-        # Create unique logger for this session
-        logger_name = f"app_logger_{session_id}"
-        logger = logging.getLogger(logger_name)
-        
-        # Clear any existing handlers
-        logger.handlers.clear()
-        
-        # Create file handler for this session
-        file_handler = logging.FileHandler(log_filename)
-        file_handler.setLevel(cls.LOG_LEVEL)
-        formatter = logging.Formatter(cls.LOG_FORMAT)
-        file_handler.setFormatter(formatter)
-        
-        logger.addHandler(file_handler)
-        logger.setLevel(cls.LOG_LEVEL)
-        
-        # Set as root logger for this session
-        logging.root.handlers = [file_handler]
-        
-        return log_filename
-    
-    @classmethod
-    def setup_logging_with_session_id(cls, session_id):
-        """Setup logging with guaranteed unique filename per session."""
-        import os
-        import uuid
-        from datetime import datetime
-        
-        os.makedirs(cls.LOG_DIRECTORY, exist_ok=True)
-        
-        # Use session ID + timestamp + random component for absolute uniqueness
-        timestamp = datetime.now().strftime("%Y-%m-%d_%H-%M-%S-%f")[:-3]
-        random_component = str(uuid.uuid4())[:8]
-        log_filename = f"{cls.LOG_DIRECTORY}{timestamp}_{session_id[:8]}_{random_component}_app.log"
-        
-        # Configure logging for this session
-        logging.basicConfig(
-            level=cls.LOG_LEVEL,
-            format=cls.LOG_FORMAT,
-            handlers=[
-                logging.FileHandler(log_filename)
-            ],
-            force=True  # Override any existing configuration
-        )
-        
-        return log_filename

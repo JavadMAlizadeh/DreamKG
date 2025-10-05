@@ -1,7 +1,7 @@
 from langchain.prompts.prompt import PromptTemplate
 
 # ==============================================================================
-# FIXED Cypher Generation Templates - Remove explanatory text issues
+# FIXED Cypher Generation Templates - Return ALL organization data
 # ==============================================================================
 
 SPATIAL_CYPHER_GENERATION_TEMPLATE = """
@@ -17,6 +17,11 @@ SPATIAL CONTEXT:
 
 MEMORY CONTEXT:
 {memory_context}
+
+IMPORTANT: ALWAYS RETURN ALL SERVICES FOR SELECTED ORGANIZATIONS
+When filtering organizations by services, use a two-step approach:
+1. First filter organizations that have the requested service using EXISTS or WITH clause
+2. Then return ALL services from those filtered organizations
 
 Important Rules for Contextual Understanding:
 1. If the user refers to previous results (using words like "they", "them", "those", "their"), look for specific organization names in the memory context.
@@ -73,10 +78,16 @@ SERVICE MATCHING RULES:
    **Other Examples when there is no match:**
    - 'first-time homebuyer workshop' → use 'first-time', 'homebuyer', AND 'workshop'
 
-9. **Multi-word Service Matching**: For complex services, use multiple keywords with AND:
-   - **CORRECT**: `WHERE toLower(s.name) CONTAINS 'replacement' AND toLower(s.name) CONTAINS 'card'`
-   - **CORRECT**: `WHERE toLower(s.name) CONTAINS 'story' AND toLower(s.name) CONTAINS 'time'`
-   - **CORRECT**: `WHERE toLower(s.name) CONTAINS 'job' AND toLower(s.name) CONTAINS 'assistance'`
+9. **Multi-word Service Matching - WHEN TO USE AND**:
+   Use AND only when keywords MUST appear TOGETHER in the same service name:
+   - CORRECT: 'story' AND 'time' → matches "Story Time"
+   - CORRECT: 'job' AND 'assistance' → matches "Job Assistance"
+   
+9.5. **Related Service Matching - WHEN TO USE OR**:
+   Use OR when keywords represent ALTERNATIVE or RELATED services:
+   - CORRECT: '1099' OR 'statement' OR 'benefit' → matches any benefits documentation
+   - CORRECT: 'appeal' OR 'dispute' → matches various appeal services
+   - CORRECT: 'computer' OR 'wi-fi' → matches technology services
 
 10. **Service Category Flexibility**: Use broader terms when specific terms might not match:
     - Instead of 'WiFi' use 'wi-fi' (lowercase)
@@ -107,35 +118,55 @@ SPATIAL QUERY RULES - CRITICAL:
     - Do NOT use: `toLower(l.zipcode) = '19134'`
     - Do NOT use: `toLower(l.state) = 'pa'`
 14. **Distance is the ONLY location filter needed**: The distance calculation with the threshold automatically filters by location.
-15. Use Neo4j spatial functions: point(), distance().
+15. Use Neo4j spatial functions: point(), point.distance().
 16. Sort results by distance when location is specified: ORDER BY distance ASC.
 17. Include distance in the result set for spatial queries.
 18. Apply distance threshold filtering using the provided threshold.
 
 MATCH vs OPTIONAL MATCH DECISION RULES - CRITICAL:
 19. **WHEN TO USE MATCH vs OPTIONAL MATCH**: Analyze what the user is specifically asking for:
-    - **LOCATION**: If user mentions specific location requirements → use MATCH (o)-[:LOCATED_AT]->(l:Location)
-    - **LOCATION**: If user does NOT mention location → use OPTIONAL MATCH (o)-[:LOCATED_AT]->(l:Location)
-    - **TIME/HOURS**: If user asks about specific days/times/hours → use MATCH (o)-[:HAS_HOURS]->(t:Time)
-    - **TIME/HOURS**: If user does NOT mention time → use OPTIONAL MATCH (o)-[:HAS_HOURS]->(t:Time)
-    - **SERVICES**: If user asks about specific services → use MATCH (o)-[r:OFFERS]->(s:Service)
-    - **SERVICES**: If user does NOT mention services → use OPTIONAL MATCH (o)-[r:OFFERS]->(s:Service)
+    - **TIME/HOURS**: If user mentions specific days/times/hours (on Tuesday, Monday, etc.) → **ALWAYS** use MATCH (o)-[:HAS_HOURS]->(t:Time) with WHERE clause
+    - **TIME/HOURS**: If user does NOT mention time/days → use OPTIONAL MATCH (o)-[:HAS_HOURS]->(t:Time)
+    - **LOCATION**: For spatial queries with coordinates → ALWAYS use MATCH (o)-[:LOCATED_AT]->(l:Location)
+    - **LOCATION**: For non-spatial queries → use OPTIONAL MATCH (o)-[:LOCATED_AT]->(l:Location)
+    - **SERVICES**: For filtering organizations → use EXISTS pattern or WITH clause
+    - **SERVICES**: For returning services → ALWAYS use MATCH to get ALL services
 
-20. **TIME QUERY EXAMPLES**:
-    - "libraries open on Sunday" → MATCH (o)-[:HAS_HOURS]->(t:Time) WHERE t.sunday <> 'Closed'
+20. **TIME QUERY DETECTION**: These phrases REQUIRE MATCH with time filtering:
+    - "on [day]" → MATCH (o)-[:HAS_HOURS]->(t:Time) WHERE t.[day] <> 'Closed'
+    - "open on [day]" → MATCH (o)-[:HAS_HOURS]->(t:Time) WHERE t.[day] <> 'Closed'
+    - "[day]" at end of query → MATCH (o)-[:HAS_HOURS]->(t:Time) WHERE t.[day] <> 'Closed'
+    - "around [time]" → MATCH (o)-[:HAS_HOURS]->(t:Time) WHERE [time condition]
+    - "after [time]" → MATCH (o)-[:HAS_HOURS]->(t:Time) WHERE [time condition]
+
+21. **CRITICAL - Time Keyword Detection**: If the query contains ANY of these day keywords, you MUST use MATCH for time:
+    - monday, tuesday, wednesday, thursday, friday, saturday, sunday
+    - weekday, weekend, today, tomorrow
+    
+22. **TIME QUERY EXAMPLES**:
+    - "libraries open on Tuesday" → MATCH (o)-[:HAS_HOURS]->(t:Time) WHERE t.tuesday <> 'Closed'
+    - "library on West Lehigh that has wi-fi on Tuesday" → MATCH (o)-[:HAS_HOURS]->(t:Time) WHERE t.tuesday <> 'Closed'
     - "social security offices open after 5pm" → MATCH (o)-[:HAS_HOURS]->(t:Time) WHERE [time condition]
     - "libraries" (no time mentioned) → OPTIONAL MATCH (o)-[:HAS_HOURS]->(t:Time)
 
-SPATIAL CYPHER PATTERNS - CRITICAL SYNTAX:
-For spatial queries, use this EXACT pattern structure:
 
-BASIC SPATIAL PATTERN (no additional filtering):
+# Add this ENHANCED instruction right after the spatial query patterns section:
+
+WITH TIME FILTERING (CRITICAL - User specified a day):
+**RULE**: If user mentions a specific day (Tuesday, Monday, etc.), you MUST use MATCH for time filtering.
+
 MATCH (o:Organization)-[:LOCATED_AT]->(l:Location)
 WITH o, l, point({{longitude: toFloat(l.longitude), latitude: toFloat(l.latitude)}}) AS orgPoint,
      point({{longitude: {user_longitude}, latitude: {user_latitude}}}) AS userPoint
 WITH o, l, round(point.distance(userPoint, orgPoint) / 1609.0 * 100) / 100 AS distance_miles
-WHERE distance_miles <= {distance_threshold}
-OPTIONAL MATCH (o)-[:HAS_HOURS]->(t:Time)
+WHERE distance_miles <= {distance_threshold} AND toLower(o.category) CONTAINS 'library'
+WITH o, l, distance_miles
+WHERE EXISTS {{{{
+    MATCH (o)-[:OFFERS]->(s:Service)
+    WHERE toLower(s.name) CONTAINS 'wi-fi'
+}}}}
+MATCH (o)-[:HAS_HOURS]->(t:Time)
+WHERE t.tuesday <> 'Closed'
 MATCH (o)-[r:OFFERS]->(s:Service)
 RETURN
 o.name,
@@ -146,6 +177,8 @@ l.street,
 l.city,
 l.state,
 l.zipcode,
+l.latitude,
+l.longitude,
 distance_miles,
 t.monday,
 t.tuesday,
@@ -156,6 +189,7 @@ t.saturday,
 t.sunday,
 COLLECT({{service: s.name, type: r.type}}) AS services
 ORDER BY distance_miles ASC
+LIMIT 5
 
 WITH CATEGORY FILTERING:
 MATCH (o:Organization)-[:LOCATED_AT]->(l:Location)
@@ -174,6 +208,8 @@ l.street,
 l.city,
 l.state,
 l.zipcode,
+l.latitude,
+l.longitude,
 distance_miles,
 t.monday,
 t.tuesday,
@@ -184,6 +220,7 @@ t.saturday,
 t.sunday,
 COLLECT({{service: s.name, type: r.type}}) AS services
 ORDER BY distance_miles ASC
+LIMIT 5
 
 WITH TIME FILTERING (open on specific day):
 MATCH (o:Organization)-[:LOCATED_AT]->(l:Location)
@@ -203,6 +240,8 @@ l.street,
 l.city,
 l.state,
 l.zipcode,
+l.latitude,
+l.longitude,
 distance_miles,
 t.monday,
 t.tuesday,
@@ -213,16 +252,23 @@ t.saturday,
 t.sunday,
 COLLECT({{service: s.name, type: r.type}}) AS services
 ORDER BY distance_miles ASC
+LIMIT 5
 
-WITH SERVICE FILTERING:
+WITH SERVICE FILTERING - TWO STEP APPROACH:
 MATCH (o:Organization)-[:LOCATED_AT]->(l:Location)
 WITH o, l, point({{longitude: toFloat(l.longitude), latitude: toFloat(l.latitude)}}) AS orgPoint,
      point({{longitude: {user_longitude}, latitude: {user_latitude}}}) AS userPoint
 WITH o, l, round(point.distance(userPoint, orgPoint) / 1609.0 * 100) / 100 AS distance_miles
 WHERE distance_miles <= {distance_threshold}
+// Step 1: Filter organizations that have the requested service
+WITH o, l, distance_miles
+WHERE EXISTS {{{{
+    MATCH (o)-[:OFFERS]->(s:Service)
+    WHERE toLower(s.name) CONTAINS 'retirement' AND toLower(s.name) CONTAINS 'benefits'
+}}}}
+// Step 2: Get ALL information about these filtered organizations
 OPTIONAL MATCH (o)-[:HAS_HOURS]->(t:Time)
 MATCH (o)-[r:OFFERS]->(s:Service)
-WHERE toLower(s.name) CONTAINS 'retirement' AND toLower(s.name) CONTAINS 'benefits'
 RETURN
 o.name,
 o.phone,
@@ -232,6 +278,8 @@ l.street,
 l.city,
 l.state,
 l.zipcode,
+l.latitude,
+l.longitude,
 distance_miles,
 t.monday,
 t.tuesday,
@@ -242,6 +290,7 @@ t.saturday,
 t.sunday,
 COLLECT({{service: s.name, type: r.type}}) AS services
 ORDER BY distance_miles ASC
+LIMIT 5
 
 WITH COMBINED FILTERING (category + time + service):
 MATCH (o:Organization)-[:LOCATED_AT]->(l:Location)
@@ -251,8 +300,14 @@ WITH o, l, round(point.distance(userPoint, orgPoint) / 1609.0 * 100) / 100 AS di
 WHERE distance_miles <= {distance_threshold} AND toLower(o.category) CONTAINS 'social security office'
 MATCH (o)-[:HAS_HOURS]->(t:Time)
 WHERE t.wednesday <> 'Closed'
+// Filter organizations that have the requested service
+WITH o, l, distance_miles, t
+WHERE EXISTS {{{{
+    MATCH (o)-[:OFFERS]->(s:Service)
+    WHERE toLower(s.name) CONTAINS 'retirement' AND toLower(s.name) CONTAINS 'benefits'
+}}}}
+// Get ALL services from the filtered organizations
 MATCH (o)-[r:OFFERS]->(s:Service)
-WHERE toLower(s.name) CONTAINS 'retirement' AND toLower(s.name) CONTAINS 'benefits'
 RETURN
 o.name,
 o.phone,
@@ -262,6 +317,8 @@ l.street,
 l.city,
 l.state,
 l.zipcode,
+l.latitude,
+l.longitude,
 distance_miles,
 t.monday,
 t.tuesday,
@@ -272,6 +329,7 @@ t.saturday,
 t.sunday,
 COLLECT({{service: s.name, type: r.type}}) AS services
 ORDER BY distance_miles ASC
+LIMIT 5
 
 CYPHER SYNTAX RULES - CRITICAL:
 21. **NEVER use EXISTS() clauses**: Do not use `EXISTS((o)-[:HAS_HOURS]->(t:Time) WHERE ...)` syntax.
@@ -280,7 +338,7 @@ CYPHER SYNTAX RULES - CRITICAL:
 24. **One WHERE per MATCH/OPTIONAL MATCH**: Each MATCH or OPTIONAL MATCH can have its own WHERE clause.
 25. **Category filtering goes in main WHERE**: Add category filters to the main WHERE clause with distance.
 26. **Time filtering goes with time MATCH**: Add time filters to the MATCH (o)-[:HAS_HOURS]->(t:Time) WHERE clause.
-27. **Service filtering goes with service MATCH**: Add service filters to the MATCH (o)-[r:OFFERS]->(s:Service) WHERE clause.
+27. **Service filtering uses EXISTS pattern**: Use EXISTS {{MATCH pattern}} for service filtering, then get ALL services separately.
 
 NON-SPATIAL Location HANDLING RULES (Only for non-spatial queries):
 28. LOCATION ALIASES: Understand common nicknames like "Philly" for "Philadelphia". Use case-insensitive matching: `toLower(l.city) CONTAINS 'philadelphia'`.
@@ -308,6 +366,7 @@ CRITICAL OUTPUT RULES:
 37. Follow the exact patterns above for spatial queries.
 38. Always include all RETURN fields as shown in the patterns.
 39. Always end with ORDER BY distance_miles ASC for spatial queries.
+40. ALWAYS return ALL services for selected organizations using the two-step approach.
 
 Question: {question}
 """
@@ -322,6 +381,11 @@ Schema:
 
 MEMORY CONTEXT:
 {memory_context}
+
+IMPORTANT: ALWAYS RETURN ALL SERVICES FOR SELECTED ORGANIZATIONS
+When filtering organizations by services, use a two-step approach:
+1. First filter organizations that have the requested service using EXISTS or WITH clause
+2. Then return ALL services from those filtered organizations
 
 Important Rules for Contextual Understanding:
 1. If the user refers to previous results (using words like "they", "them", "those", "their"), look for specific organization names in the memory context.
@@ -378,10 +442,16 @@ SERVICE MATCHING RULES:
    **Other Examples when there is no match:**
    - 'first-time homebuyer workshop' → use 'first-time', 'homebuyer', AND 'workshop'
 
-9. **Multi-word Service Matching**: For complex services, use multiple keywords with AND:
-   - **CORRECT**: `WHERE toLower(s.name) CONTAINS 'replacement' AND toLower(s.name) CONTAINS 'card'`
-   - **CORRECT**: `WHERE toLower(s.name) CONTAINS 'story' AND toLower(s.name) CONTAINS 'time'`
-   - **CORRECT**: `WHERE toLower(s.name) CONTAINS 'job' AND toLower(s.name) CONTAINS 'assistance'`
+9. **Multi-word Service Matching - WHEN TO USE AND**:
+   Use AND only when keywords MUST appear TOGETHER in the same service name:
+   - CORRECT: 'story' AND 'time' → matches "Story Time"
+   - CORRECT: 'job' AND 'assistance' → matches "Job Assistance"
+   
+9.5. **Related Service Matching - WHEN TO USE OR**:
+   Use OR when keywords represent ALTERNATIVE or RELATED services:
+   - CORRECT: '1099' OR 'statement' OR 'benefit' → matches any benefits documentation
+   - CORRECT: 'appeal' OR 'dispute' → matches various appeal services
+   - CORRECT: 'computer' OR 'wi-fi' → matches technology services
 
 10. **Service Category Flexibility**: Use broader terms when specific terms might not match:
     - Instead of 'WiFi' use 'wi-fi' (lowercase)
@@ -411,8 +481,8 @@ MATCH vs OPTIONAL MATCH DECISION RULES - CRITICAL:
     - **LOCATION**: If user does NOT mention location → use OPTIONAL MATCH (o)-[:LOCATED_AT]->(l:Location)
     - **TIME/HOURS**: If user asks about specific days/times/hours → use MATCH (o)-[:HAS_HOURS]->(t:Time)
     - **TIME/HOURS**: If user does NOT mention time → use OPTIONAL MATCH (o)-[:HAS_HOURS]->(t:Time)
-    - **SERVICES**: If user asks about specific services → use MATCH (o)-[r:OFFERS]->(s:Service)
-    - **SERVICES**: If user does NOT mention services → use OPTIONAL MATCH (o)-[r:OFFERS]->(s:Service)
+    - **SERVICES**: For filtering organizations → use EXISTS pattern or WITH clause
+    - **SERVICES**: For returning services → ALWAYS use MATCH to get ALL services
 
 14. **TIME QUERY EXAMPLES**:
     - "libraries open on Sunday" → MATCH (o)-[:HAS_HOURS]->(t:Time) WHERE t.sunday <> 'Closed'
@@ -424,9 +494,7 @@ CYPHER SYNTAX RULES - CRITICAL:
 16. **OPTIONAL MATCH with WHERE**: You can use WHERE clauses with OPTIONAL MATCH to filter optional relationships.
 17. **Multiple OPTIONAL MATCH patterns**: Use separate OPTIONAL MATCH clauses for different relationship types.
 18. **One WHERE per MATCH/OPTIONAL MATCH**: Each MATCH or OPTIONAL MATCH can have its own WHERE clause.
-19. **Service Pattern Filtering**: To filter based on services, use MATCH with WHERE:
-    MATCH (o)-[r:OFFERS]->(s:Service)
-    WHERE toLower(s.name) CONTAINS 'keyword1' AND toLower(s.name) CONTAINS 'keyword2'
+19. **Service Pattern Filtering**: To filter based on services, use EXISTS {{MATCH pattern}} for organization filtering, then get ALL services separately.
 20. **Time Pattern Filtering**: To filter based on operating hours, use MATCH with WHERE:
     MATCH (o)-[:HAS_HOURS]->(t:Time)
     WHERE t.sunday <> 'Closed'
@@ -436,6 +504,7 @@ CRITICAL OUTPUT RULES:
 22. Do NOT include "Here is the Cypher query:" or any introductory text.
 23. Do NOT wrap in markdown code blocks (```) or any formatting.
 24. Start directly with MATCH, OPTIONAL MATCH, or WITH.
+25. ALWAYS return ALL services for selected organizations using the two-step approach.
 
 NON-SPATIAL QUERY PATTERNS:
 
@@ -444,7 +513,7 @@ MATCH (o:Organization)
 WHERE toLower(o.category) CONTAINS 'library'
 OPTIONAL MATCH (o)-[:LOCATED_AT]->(l:Location)
 OPTIONAL MATCH (o)-[:HAS_HOURS]->(t:Time)
-OPTIONAL MATCH (o)-[r:OFFERS]->(s:Service)
+MATCH (o)-[r:OFFERS]->(s:Service)
 RETURN
 o.name,
 o.phone,
@@ -462,12 +531,13 @@ t.friday,
 t.saturday,
 t.sunday,
 COLLECT({{service: s.name, type: r.type}}) AS services
+LIMIT 5
 
 WITH LOCATION FILTERING (user mentions specific location):
 MATCH (o:Organization)-[:LOCATED_AT]->(l:Location)
 WHERE toLower(l.city) CONTAINS 'philadelphia' AND toLower(o.category) CONTAINS 'library'
 OPTIONAL MATCH (o)-[:HAS_HOURS]->(t:Time)
-OPTIONAL MATCH (o)-[r:OFFERS]->(s:Service)
+MATCH (o)-[r:OFFERS]->(s:Service)
 RETURN
 o.name,
 o.phone,
@@ -485,6 +555,7 @@ t.friday,
 t.saturday,
 t.sunday,
 COLLECT({{service: s.name, type: r.type}}) AS services
+LIMIT 5
 
 WITH TIME FILTERING (user asks about specific hours/days):
 MATCH (o:Organization)
@@ -492,7 +563,7 @@ WHERE toLower(o.category) CONTAINS 'library'
 OPTIONAL MATCH (o)-[:LOCATED_AT]->(l:Location)
 MATCH (o)-[:HAS_HOURS]->(t:Time)
 WHERE t.sunday <> 'Closed'
-OPTIONAL MATCH (o)-[r:OFFERS]->(s:Service)
+MATCH (o)-[r:OFFERS]->(s:Service)
 RETURN
 o.name,
 o.phone,
@@ -510,14 +581,21 @@ t.friday,
 t.saturday,
 t.sunday,
 COLLECT({{service: s.name, type: r.type}}) AS services
+LIMIT 5
 
-WITH SERVICE FILTERING (user asks about specific services):
+WITH SERVICE FILTERING - TWO STEP APPROACH (user asks about specific services):
 MATCH (o:Organization)
 WHERE toLower(o.category) CONTAINS 'library'
+// Step 1: Filter organizations that have the requested service
+WITH o
+WHERE EXISTS {{{{
+    MATCH (o)-[:OFFERS]->(s:Service)
+    WHERE toLower(s.name) CONTAINS 'computer' AND toLower(s.name) CONTAINS 'training'
+}}}}
+// Step 2: Get ALL information about these filtered organizations
 OPTIONAL MATCH (o)-[:LOCATED_AT]->(l:Location)
 OPTIONAL MATCH (o)-[:HAS_HOURS]->(t:Time)
 MATCH (o)-[r:OFFERS]->(s:Service)
-WHERE toLower(s.name) CONTAINS 'computer' AND toLower(s.name) CONTAINS 'training'
 RETURN
 o.name,
 o.phone,
@@ -535,15 +613,22 @@ t.friday,
 t.saturday,
 t.sunday,
 COLLECT({{service: s.name, type: r.type}}) AS services
+LIMIT 5
 
 WITH COMBINED FILTERING (user specifies category + time + service):
 MATCH (o:Organization)
 WHERE toLower(o.category) CONTAINS 'library'
-OPTIONAL MATCH (o)-[:LOCATED_AT]->(l:Location)
 MATCH (o)-[:HAS_HOURS]->(t:Time)
 WHERE t.sunday <> 'Closed'
+// Filter organizations that have the requested service
+WITH o, t
+WHERE EXISTS {{{{
+    MATCH (o)-[:OFFERS]->(s:Service)
+    WHERE toLower(s.name) CONTAINS 'computer'
+}}}}
+// Get ALL information about these filtered organizations
+OPTIONAL MATCH (o)-[:LOCATED_AT]->(l:Location)
 MATCH (o)-[r:OFFERS]->(s:Service)
-WHERE toLower(s.name) CONTAINS 'computer'
 RETURN
 o.name,
 o.phone,
@@ -561,19 +646,20 @@ t.friday,
 t.saturday,
 t.sunday,
 COLLECT({{service: s.name, type: r.type}}) AS services
+LIMIT 5
 
 Location HANDLING RULES (For NON-SPATIAL queries only):
-25. LOCATION ALIASES: Understand common nicknames like "Philly" for "Philadelphia". Use case-insensitive matching: `toLower(l.city) CONTAINS 'philadelphia'`.
-26. For NON-SPATIAL location-based service queries, use this pattern:
+26. LOCATION ALIASES: Understand common nicknames like "Philly" for "Philadelphia". Use case-insensitive matching: `toLower(l.city) CONTAINS 'philadelphia'`.
+27. For NON-SPATIAL location-based service queries, use this pattern:
     MATCH (o:Organization)-[:OFFERS {{type: 'Free'}}]->(s:Service), (o)-[:LOCATED_AT]->(l:Location)
     WHERE toLower(l.city) CONTAINS 'cityname'
     OPTIONAL MATCH (o)-[:HAS_HOURS]->(t:Time)
     MATCH (o)-[r:OFFERS]->(s2:Service)
 
 TIME HANDLING RULES:
-27. For time-related queries, the database stores times in format like "10:00 AM - 5:30 PM" or "Closed".
-28. TIME COMPARISONS: For queries like "open after 7:25 PM", you must use APOC temporal functions for accurate comparison.
-29. Example pattern for "open after X time":
+28. For time-related queries, the database stores times in format like "10:00 AM - 5:30 PM" or "Closed".
+29. TIME COMPARISONS: For queries like "open after 7:25 PM", you must use APOC temporal functions for accurate comparison.
+30. Example pattern for "open after X time":
    MATCH (o:Organization)-[:HAS_HOURS]->(t:Time)
    WHERE ANY(day IN [t.monday, t.tuesday, t.wednesday, t.thursday, t.friday, t.saturday, t.sunday]
          WHERE day <> 'Closed' AND
@@ -587,10 +673,11 @@ WHERE toLower(o.category) CONTAINS 'library'
 OPTIONAL MATCH (o)-[:LOCATED_AT]->(l:Location)
 MATCH (o)-[:HAS_HOURS]->(t:Time)
 WHERE t.sunday <> 'Closed'
-OPTIONAL MATCH (o)-[r:OFFERS]->(s:Service)
+MATCH (o)-[r:OFFERS]->(s:Service)
 RETURN o.name, o.phone, o.status, o.category, l.street, l.city, l.state, l.zipcode,
        t.monday, t.tuesday, t.wednesday, t.thursday, t.friday, t.saturday, t.sunday,
        COLLECT({{service: s.name, type: r.type}}) AS services
+       LIMIT 5
 
 Question: {question}
 """

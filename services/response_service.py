@@ -1,4 +1,7 @@
-# Give a strict style to the response
+"""
+Enhanced Response Service with optimized two-tier data structure.
+This version prepares data specifically for collapsible display.
+"""
 
 import logging
 import re
@@ -10,12 +13,11 @@ from templates.prompts import PromptTemplateFactory
 
 class ResponseService:
     """
-    Handles response generation and formatting with strict formatting enforcement.
+    Enhanced response service that structures data for two-tier display.
     """
     
     def __init__(self):
         """Initialize response service with LLM and prompt templates."""
-        # Initialize LLM
         self.llm = ChatGroq(
             model=Config.LLM_MODEL, 
             temperature=Config.LLM_TEMPERATURE
@@ -31,11 +33,11 @@ class ResponseService:
         self.spatial_qa_chain = LLMChain(llm=self.llm, prompt=self.spatial_qa_prompt)
         self.simple_qa_chain = LLMChain(llm=self.llm, prompt=self.simple_qa_prompt)
         
-        logging.info("ResponseService initialized with strict formatting enforcement")
+        logging.info("ResponseService initialized with two-tier display support")
     
     def generate_response(self, query, results, is_spatial=False, is_focused=False):
         """
-        Generate response using appropriate QA chain with strict formatting.
+        Generate response with enhanced two-tier structure.
         
         Args:
             query (str): Original user query
@@ -44,7 +46,7 @@ class ResponseService:
             is_focused (bool): Whether this requires focused response
             
         Returns:
-            dict: Response generation result with enforced formatting
+            dict: Response with two-tier structure
         """
         try:
             if not results:
@@ -54,7 +56,7 @@ class ResponseService:
                     'chain_used': 'none'
                 }
             
-            # Generate initial response using appropriate chain
+            # Generate response using appropriate chain
             if is_focused:
                 qa_response = self.focused_qa_chain.invoke({
                     "context": results,
@@ -81,13 +83,15 @@ class ResponseService:
             
             response_text = qa_response.get('text', 'Sorry, an answer could not be generated.')
             
-            # Apply strict formatting enforcement - return structured data for better display
+            # Create enhanced two-tier structured response
             if is_focused:
-                formatted_response = response_text  # Keep focused responses as-is
+                formatted_response = response_text
             else:
-                formatted_response = self._create_structured_response(response_text, results, is_spatial)
+                formatted_response = self._create_two_tier_response(
+                    response_text, results, is_spatial, query  # PASS query
+                )
             
-            logging.info(f"Response generated and formatted using {chain_used} chain")
+            logging.info(f"Enhanced two-tier response generated using {chain_used} chain")
             
             return {
                 'success': True,
@@ -104,21 +108,11 @@ class ResponseService:
                 'chain_used': 'error'
             }
     
-    def _create_structured_response(self, response_text, results, is_spatial):
-        """
-        Create a structured response that bypasses Streamlit markdown issues.
-        
-        Args:
-            response_text (str): Original LLM response
-            results (list): Database query results
-            is_spatial (bool): Whether query was spatial
-            
-        Returns:
-            dict: Structured response data
-        """
+    def _create_two_tier_response(self, response_text, results, is_spatial, user_query=""):
+        """Create a structured response compatible with the display function."""
         try:
             # Extract intro text
-            intro_match = re.match(r'^(.*?)(?=(?:\d+\.|\*|•|-)|\Z)', response_text, re.DOTALL)
+            intro_match = re.match(r'^(.*?)(?=(?:\d+\.|\*|●|-)|\Z)', response_text, re.DOTALL)
             intro_text = intro_match.group(1).strip() if intro_match else ""
             intro_text = self._clean_intro_text(intro_text, len(results), is_spatial)
             
@@ -126,7 +120,7 @@ class ResponseService:
             organizations = []
             for i, result in enumerate(results, 1):
                 org_data = self._extract_organization_data(result)
-                organizations.append(self._format_organization_for_display(org_data, i, is_spatial))
+                organizations.append(self._format_organization_for_display(org_data, i, is_spatial, user_query))  # PASS user_query
             
             return {
                 'type': 'structured',
@@ -135,11 +129,10 @@ class ResponseService:
             }
             
         except Exception as e:
-            logging.error(f"Structured response creation failed: {str(e)}")
-            # Fallback to simple text
+            logging.error(f"Two-tier response creation failed: {str(e)}")
             return response_text
-    
-    def _format_organization_for_display(self, org_data, number, is_spatial):
+
+    def _format_organization_for_display(self, org_data, number, is_spatial, user_query=""):
         """Format organization for structured display."""
         org = {
             'number': number,
@@ -156,16 +149,28 @@ class ResponseService:
         if org_data.get('phone'):
             org['main_items'].append(f"Phone: {org_data['phone']}")
         
-        if org_data.get('status'):
-            org['main_items'].append(f"Status: {org_data['status']}")
-        
-        if org_data.get('category'):
-            org['main_items'].append(f"Category: {org_data['category']}")
-        
         if org_data.get('address'):
             org['main_items'].append(f"Address: {org_data['address']}")
         
-        # Add hours
+        # Services - Show only requested services (first 3 as inline list)
+        services = org_data.get('services', [])
+        free_services = []
+        for service in services:
+            if isinstance(service, dict):
+                if service.get('type', 'Free').lower() != 'paid':
+                    free_services.append(service.get('service', 'Unknown'))
+            else:
+                free_services.append(str(service))
+        
+        if free_services:
+            preview_services = sorted(free_services)[:3]
+            services_text = ", ".join(preview_services)
+            org['main_items'].append(f"Services: {services_text}")
+        
+        # REMOVED: Time-specific logic from short view
+        # Hours will ONLY appear in the expandable full details section
+        
+        # Add ALL hours to the full details section (this is separate from main_items)
         hours_data = org_data.get('hours', {})
         if hours_data:
             day_order = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday']
@@ -173,8 +178,7 @@ class ResponseService:
                 if day in hours_data:
                     org['hours'][day] = hours_data[day]
         
-        # Add services
-        services = org_data.get('services', [])
+        # Add services to full details
         for service in services:
             if isinstance(service, dict):
                 service_name = service.get('service', 'Unknown Service')
@@ -194,10 +198,81 @@ class ResponseService:
         
         return org
     
+    def _format_organization_two_tier(self, org_data, number, is_spatial):
+        """
+        Format organization with explicit short/long view separation.
+        
+        Args:
+            org_data (dict): Extracted organization data
+            number (int): Organization number in list
+            is_spatial (bool): Whether this is a spatial query
+            
+        Returns:
+            dict: Organization data with short_view and long_view
+        """
+        # ===== SHORT VIEW DATA =====
+        short_view = {
+            'number': number,
+            'name': org_data['name'],
+            'distance': org_data.get('distance'),  # Will be None for non-spatial
+            'status': org_data.get('status'),
+            'category': org_data.get('category'),
+            'key_services': []  # Top 3 services for preview
+        }
+        
+        # Get top services for preview
+        services = org_data.get('services', [])
+        free_services = []
+        for service in services:
+            if isinstance(service, dict):
+                if service.get('type', 'Free').lower() != 'paid':
+                    free_services.append(service.get('service', 'Unknown'))
+            else:
+                free_services.append(str(service))
+        
+        short_view['key_services'] = sorted(free_services)[:3]
+        short_view['total_services_count'] = len(free_services)
+        
+        # ===== LONG VIEW DATA (Full Details) =====
+        long_view = {
+            'phone': org_data.get('phone'),
+            'address': org_data.get('address'),
+            'hours': org_data.get('hours', {}),
+            'all_services': {
+                'free': [],
+                'paid': []
+            }
+        }
+        
+        # Organize all services by type
+        for service in services:
+            if isinstance(service, dict):
+                service_name = service.get('service', 'Unknown Service')
+                service_type = service.get('type', 'Free')
+            else:
+                service_name = str(service)
+                service_type = 'Free'
+            
+            if service_type.lower() == 'paid':
+                long_view['all_services']['paid'].append(service_name)
+            else:
+                long_view['all_services']['free'].append(service_name)
+        
+        # Sort services alphabetically
+        long_view['all_services']['free'].sort()
+        long_view['all_services']['paid'].sort()
+        
+        return {
+            'short_view': short_view,
+            'long_view': long_view
+        }
+    
     def _extract_organization_data(self, result):
-        """Extract and normalize organization data from database result."""
+        """
+        Extract and normalize organization data from database result.
+        (Same as before - no changes needed)
+        """
         try:
-            # Handle different result formats
             name = (result.get('o.name') or 
                    result.get('name') or 
                    result.get('organizationName') or 
@@ -242,19 +317,23 @@ class ResponseService:
             # Extract hours
             hours = {}
             days = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday']
+
+            # DEBUG: Log all keys in the result
+            logging.info(f"Result keys for {name}: {list(result.keys())}")
+
             for day in days:
                 day_hours = (result.get(f't.{day}') or 
-                           result.get(day) or 
-                           result.get(day.capitalize()))
+                        result.get(day) or 
+                        result.get(day.capitalize()))
                 if day_hours:
                     hours[day.capitalize()] = day_hours
+                    logging.info(f"Found hours for {day.capitalize()}: {day_hours}")
             
             # Extract services
             services = []
             if 'services' in result and isinstance(result['services'], list):
                 services = result['services']
             elif 'services' in result and isinstance(result['services'], dict):
-                # Handle single service as dict
                 services = [result['services']]
             
             return {
@@ -274,16 +353,15 @@ class ResponseService:
     
     def _clean_intro_text(self, intro_text, result_count, is_spatial):
         """Clean and standardize introductory text."""
-        # Remove common LLM artifacts
         intro_text = re.sub(r'^(here are|here is|i found|found)\s+', '', intro_text, flags=re.IGNORECASE)
         intro_text = re.sub(r'\s+(here are the details|details|information)[:.]?\s*$', '', intro_text, flags=re.IGNORECASE)
         
-        # Ensure it ends with a colon if it describes what follows
         if intro_text and not intro_text.endswith((':',)):
             intro_text += ":"
         
         return intro_text.strip()
     
+    # Keep all other methods from original ResponseService...
     def generate_focused_response(self, query, results):
         """Generate focused response for specific follow-up questions."""
         return self.generate_response(query, results, is_spatial=False, is_focused=True)
@@ -295,141 +373,99 @@ class ResponseService:
     def generate_simple_response(self, query, results):
         """Generate simple response with full organization details."""
         return self.generate_response(query, results, is_spatial=False, is_focused=False)
+
+
+# ===== ENHANCED DISPLAY FUNCTION FOR TWO-TIER =====
+def display_two_tier_response(response_data):
+    """
+    Display response using the enhanced two-tier structure.
     
-    def format_error_response(self, error_type, error_message, suggestions=None):
-        """Format error responses with helpful information."""
-        if error_type == 'geocoding':
-            response = f"I couldn't find the location you mentioned. {error_message}"
-            if not suggestions:
-                suggestions = [
-                    "Try being more specific (e.g., 'near City Hall' instead of 'downtown')",
-                    "Use a street address or zip code",
-                    "Check for typos in the location name"
-                ]
-        elif error_type == 'no_results':
-            response = f"No organizations found matching your criteria."
-            if not suggestions:
-                suggestions = [
-                    "Try expanding your search area",
-                    "Check different days of the week",
-                    "Look for similar services"
-                ]
-        elif error_type == 'query':
-            response = f"There was an issue processing your request."
-            if not suggestions:
-                suggestions = [
-                    "Try rephrasing your question",
-                    "Be more specific about what you're looking for"
-                ]
-        else:
-            response = f"An unexpected error occurred: {error_message}"
-            suggestions = suggestions or ["Please try again later"]
-        
-        if suggestions:
-            response += "\n\nSuggestions:"
-            for suggestion in suggestions:
-                response += f"\n● {suggestion}"
-        
-        return {
-            'success': True,
-            'response': response,
-            'chain_used': 'error_formatter',
-            'error_type': error_type
-        }
+    Args:
+        response_data: Response dict with short_view/long_view structure
+    """
+    import streamlit as st
     
-    def generate_help_response(self):
-        """Generate help response explaining system capabilities."""
-        help_text = """
-I can help you find information about organizations in Philadelphia! Here's what I can do:
-
-**Spatial Queries:**
-● "Libraries near City Hall"
-● "Social security offices within 2 miles of Temple University"
-● "Organizations in South Philly"
-
-**Service Queries:**
-● "Where can I find free Wi-Fi?"
-● "Organizations with printing services"
-● "Places open on Sunday"
-
-**Follow-up Questions:**
-After I find organizations, you can ask:
-● "What are their hours on Monday?"
-● "Do they have Wi-Fi?"
-● "What are their paid services?"
-
-**Time-based Queries:**
-● "Libraries open after 7 PM"
-● "Organizations open on weekends"
-
-**Examples:**
-● "Libraries near City Hall" → "What are their hours?"
-● "Social security offices in North Philly" → "Which ones are open on Saturday?"
-● "Organizations with free computers" → "Do they have printing?"
-
-Just ask naturally - I'll understand what you're looking for!
-"""
-        
-        return {
-            'success': True,
-            'response': help_text.strip(),
-            'chain_used': 'help'
-        }
+    # Handle string responses
+    if isinstance(response_data, str):
+        st.markdown(response_data)
+        return
     
-    def generate_suggestion_response(self, result_count, is_spatial=False, used_memory=False, 
-                                   expanded_radius=False, original_threshold=None, 
-                                   expanded_threshold=None):
-        """Generate helpful suggestions based on query results."""
-        suggestions = []
-        
-        if used_memory:
-            suggestions.append("💭 Memory: This answer is based on your previous query. Ask a new question to search again.")
-        
-        elif is_spatial:
-            if expanded_radius and original_threshold and expanded_threshold:
-                suggestions.append(f"🔍 No organizations found within {original_threshold} miles. Expanded search to {expanded_threshold} miles...")
+    # Check if this is a two-tier response
+    if isinstance(response_data, dict):
+        if response_data.get('display_mode') == 'two_tier':
+            # Display intro
+            if response_data.get('intro'):
+                st.markdown(response_data['intro'])
+                st.write("")
             
-            if result_count > 3:
-                suggestions.append(f"💡 Tip: Found {result_count} organizations. Try asking focused follow-up questions like 'What are their paid services?' or 'Do they have Wi-Fi?'")
-            elif result_count == 0:
-                threshold = expanded_threshold or original_threshold or "the specified distance"
-                suggestions.append(f"💡 Tip: No organizations found within {threshold} miles. Try expanding your search radius or check a different area.")
+            # Display each organization with two-tier view
+            for org in response_data.get('organizations', []):
+                short = org.get('short_view', {})
+                long = org.get('long_view', {})
+                
+                # SHORT VIEW
+                st.markdown(f"**{short['number']}. {short['name']}**")
+                
+                # Build short info line
+                info_parts = []
+                if short.get('distance'):
+                    info_parts.append(f"📍 {short['distance']} miles")
+                if short.get('status'):
+                    emoji = "✅" if short['status'].lower() == "open" else "❌"
+                    info_parts.append(f"{emoji} {short['status']}")
+                if short.get('category'):
+                    info_parts.append(f"🏢 {short['category']}")
+                
+                if info_parts:
+                    st.markdown(" • ".join(info_parts))
+                
+                # Key services preview
+                if short.get('key_services'):
+                    services_text = ", ".join(short['key_services'])
+                    extra_count = short.get('total_services_count', 0) - len(short['key_services'])
+                    if extra_count > 0:
+                        services_text += f" (+{extra_count} more)"
+                    st.markdown(f"🎯 {services_text}")
+                
+                # EXPANDABLE LONG VIEW
+                with st.expander("➕ Show full details", expanded=False):
+                    if long.get('phone'):
+                        st.markdown(f"**📞 Phone:** {long['phone']}")
+                    if long.get('address'):
+                        st.markdown(f"**📍 Address:** {long['address']}")
+                    
+                    # Hours
+                    if long.get('hours'):
+                        st.markdown("**🕐 Hours:**")
+                        for day, time in long['hours'].items():
+                            if time.lower() == 'closed':
+                                st.markdown(f"  • {day}: *Closed*")
+                            else:
+                                st.markdown(f"  • {day}: {time}")
+                    
+                    # All services
+                    all_services = long.get('all_services', {})
+                    if all_services.get('free') or all_services.get('paid'):
+                        st.markdown("**🎯 All Services:**")
+                        
+                        if all_services.get('free'):
+                            st.markdown("  *Free Services:*")
+                            for service in all_services['free']:
+                                st.markdown(f"    • {service}")
+                        
+                        if all_services.get('paid'):
+                            st.markdown("  *Paid Services:*")
+                            for service in all_services['paid']:
+                                st.markdown(f"    • {service}")
+                
+                st.write("")
         
+        elif response_data.get('type') == 'structured':
+            # Fallback to original structured display
+            st.markdown("Using fallback display...")
+            st.write(response_data)
         else:
-            if result_count > 1:
-                suggestions.append(f"💡 Tip: Found {result_count} organizations. Ask focused follow-up questions like 'What are their paid services?' or 'What are their hours on Monday?'")
-        
-        return "\n".join(suggestions) if suggestions else ""
-    
-    def validate_results(self, results):
-        """Validate query results for response generation."""
-        if results is None:
-            return {
-                'valid': False,
-                'message': "Results are None"
-            }
-        
-        if not isinstance(results, list):
-            return {
-                'valid': False,
-                'message': "Results must be a list"
-            }
-        
-        if len(results) == 0:
-            return {
-                'valid': True,
-                'message': "No results found"
-            }
-        
-        # Check if results have expected structure
-        sample_result = results[0]
-        if not isinstance(sample_result, dict):
-            return {
-                'valid': False,
-                'message': "Results must contain dictionaries"
-            }
-        
-        return {
-            'valid': True,
-            'message': f"Valid results with {len(results)} items"
-        }
+            # Unknown format
+            st.markdown(str(response_data))
+    else:
+        st.markdown(str(response_data))
