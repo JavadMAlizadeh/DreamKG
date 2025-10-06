@@ -35,9 +35,12 @@ class OrganizationInfoApp:
         
         self.session_id = session_id
         
-        # Setup logging with session ID
-        self.log_filename = Config.setup_logging_with_session_id(session_id)
+        # Setup logging with session ID and get logger instance
+        self.log_filename, self.logger = Config.setup_logging_with_session_id(session_id)
         Config.validate_config()
+        
+        # Use session-specific logger instead of root logger
+        self.logger.info(f"OrganizationInfoApp initialized for session: {self.session_id}")
         
         # Initialize enhanced metrics collector first
         self.metrics = MetricsCollector(session_id=session_id)
@@ -45,9 +48,9 @@ class OrganizationInfoApp:
         # Initialize Google Sheets logger
         try:
             self.sheets_logger = GoogleSheetsLogger()
-            logging.info("Google Sheets logger initialized successfully")
+            self.logging.info("Google Sheets logger initialized successfully")
         except Exception as e:
-            logging.warning(f"Failed to initialize Google Sheets logger: {str(e)}")
+            self.logging.warning(f"Failed to initialize Google Sheets logger: {str(e)}")
             self.sheets_logger = None
         
         # Initialize core components
@@ -64,7 +67,7 @@ class OrganizationInfoApp:
         )
         self.response_service = ResponseService()
         
-        logging.info(f"OrganizationInfoApp initialized for session: {self.session_id}")
+        self.logging.info(f"OrganizationInfoApp initialized for session: {self.session_id}")
     
     def log_session_to_sheets(self):
         """Log the current session data to Google Sheets."""
@@ -75,12 +78,12 @@ class OrganizationInfoApp:
                 
                 # Log to Google Sheets
                 self.sheets_logger.log_session_data(self.log_filename, metrics_data)
-                logging.info("Session data logged to Google Sheets successfully")
+                self.logging.info("Session data logged to Google Sheets successfully")
                 
             except Exception as e:
-                logging.error(f"Failed to log session to Google Sheets: {str(e)}")
+                self.logging.error(f"Failed to log session to Google Sheets: {str(e)}")
         else:
-            logging.warning("Google Sheets logger not available, skipping session log")
+            self.logging.warning("Google Sheets logger not available, skipping session log")
 
     def get_log_filename(self):
         """Get the current log filename."""
@@ -124,7 +127,7 @@ class OrganizationInfoApp:
         
         for pattern in personal_location_patterns:
             if re.search(pattern, query_lower):
-                logging.info(f"Personal location pattern detected: {pattern}")
+                self.logging.info(f"Personal location pattern detected: {pattern}")
                 return True
         
         return False
@@ -142,9 +145,9 @@ class OrganizationInfoApp:
         """
         # Log user location information
         if user_location:
-            logging.info(f"User location received: Latitude: {user_location[0]}, Longitude: {user_location[1]}")
+            self.logging.info(f"User location received: Latitude: {user_location[0]}, Longitude: {user_location[1]}")
         else:
-            logging.info("No user location available or permission denied")
+            self.logging.info("No user location available or permission denied")
         
         # Determine spatial processing approach based on scenarios
         should_call_spatial_intel = True
@@ -157,30 +160,30 @@ class OrganizationInfoApp:
             # Personal location queries ("near me", "around me", etc.) should NEVER call spatial intelligence
             if user_location:
                 # Scenario 3: Use user's location, don't call spatial intelligence
-                logging.info("Scenario 3: User allowed location + personal reference - using user location directly")
+                self.logging.info("Scenario 3: User allowed location + personal reference - using user location directly")
                 should_call_spatial_intel = False
                 final_coordinates = user_location
             else:
                 # Scenario 1 variant: No permission but personal reference - use City Hall as default
-                logging.info("Scenario 1 variant: No location permission + personal reference - using City Hall as default")
+                self.logging.info("Scenario 1 variant: No location permission + personal reference - using City Hall as default")
                 should_call_spatial_intel = False
                 final_coordinates = (39.952335, -75.163789)  # City Hall coordinates
         else:
             # Not a personal location query - check for specific locations
             if user_location:
                 # Scenario 4: User allowed location but mentioned specific area - use spatial intelligence
-                logging.info("Scenario 4: User allowed location + specific area mentioned - using spatial intelligence")
+                self.logging.info("Scenario 4: User allowed location + specific area mentioned - using spatial intelligence")
                 should_call_spatial_intel = True
             else:
                 # User denied location access or location not available
                 has_specific_location = self.spatial_intel.extract_location_from_query(user_query)
                 if has_specific_location:
                     # Scenario 2: No permission + specific location mentioned - use spatial intelligence
-                    logging.info("Scenario 2: No location permission + specific area mentioned - using spatial intelligence")
+                    self.logging.info("Scenario 2: No location permission + specific area mentioned - using spatial intelligence")
                     should_call_spatial_intel = True
                 else:
                     # Scenario 1: No permission + no specific location - use City Hall as default
-                    logging.info("Scenario 1: No location permission + no specific area - using City Hall as default")
+                    self.logging.info("Scenario 1: No location permission + no specific area - using City Hall as default")
                     should_call_spatial_intel = False
                     final_coordinates = (39.952335, -75.163789)  # City Hall coordinates
         
@@ -210,8 +213,8 @@ class OrganizationInfoApp:
         Returns:
             str: Response content to display
         """
-        logging.info("="*30)
-        logging.info(f"Processing query with predefined coordinates: {coordinates}")
+        self.logging.info("="*30)
+        self.logging.info(f"Processing query with predefined coordinates: {coordinates}")
         
         # Start comprehensive metrics tracking
         query_id = self.metrics.start_query(user_query)
@@ -233,7 +236,7 @@ class OrganizationInfoApp:
             if (self.query_service.is_simple_followup(user_query) and 
                 self.memory.should_use_memory(user_query)):
                 
-                logging.info("Detected simple follow-up query - using cached results")
+                self.logging.info("Detected simple follow-up query - using cached results")
                 return self._handle_cached_query_with_enhanced_metrics(user_query)
             
             # Process query directly with coordinates (bypass spatial intelligence)
@@ -289,7 +292,7 @@ class OrganizationInfoApp:
                 error_message=str(e),
                 neo4j_duration=0.0
             )
-            logging.error(f"Query processing failed with exception: {str(e)}")
+            self.logging.error(f"Query processing failed with exception: {str(e)}")
             return f"Sorry, there was an error processing your query: {str(e)}"
         
         finally:
@@ -304,7 +307,7 @@ class OrganizationInfoApp:
             self.metrics.log_statistics_to_file()
             
         except Exception as e:
-            logging.error(f"Error in enhanced metrics display: {str(e)}")
+            self.logging.error(f"Error in enhanced metrics display: {str(e)}")
     
     def _process_user_query_with_enhanced_metrics(self, user_query):
         """
@@ -316,8 +319,8 @@ class OrganizationInfoApp:
         Returns:
             str: Response content to display
         """
-        logging.info("="*30)
-        logging.info(f"Processing new user query: {user_query}")
+        self.logging.info("="*30)
+        self.logging.info(f"Processing new user query: {user_query}")
         
         # Start comprehensive metrics tracking
         query_id = self.metrics.start_query(user_query)
@@ -339,7 +342,7 @@ class OrganizationInfoApp:
             if (self.query_service.is_simple_followup(user_query) and 
                 self.memory.should_use_memory(user_query)):
                 
-                logging.info("Detected simple follow-up query - using cached results")
+                self.logging.info("Detected simple follow-up query - using cached results")
                 return self._handle_cached_query_with_enhanced_metrics(user_query)
             
             # Process query through full pipeline with enhanced metrics
@@ -410,7 +413,7 @@ class OrganizationInfoApp:
                 error_message=str(e),
                 neo4j_duration=0.0
             )
-            logging.error(f"Query processing failed with exception: {str(e)}")
+            self.logging.error(f"Query processing failed with exception: {str(e)}")
             return f"Sorry, there was an error processing your query: {str(e)}"
         
         finally:
@@ -523,7 +526,7 @@ class OrganizationInfoApp:
     def _handle_response_error(self, response_result):
         """Handle errors in response generation."""
         error_message = response_result.get('error', 'Unknown error')
-        logging.error(f"Response generation failed: {error_message}")
+        self.logging.error(f"Response generation failed: {error_message}")
         return f"Sorry, there was an error generating the response: {error_message}"
     
     def _format_results_with_performance_info(self, response_result, query_result):
@@ -537,7 +540,7 @@ class OrganizationInfoApp:
         Returns:
             str or dict: Formatted response content
         """
-        logging.info(f"Final Answer:\n\n{response_result['response']}")
+        self.logging.info(f"Final Answer:\n\n{response_result['response']}")
 
         # Get the main response
         content = response_result['response']
@@ -568,7 +571,7 @@ class OrganizationInfoApp:
                         content = str(content) + f"\n\n{suggestions}"
                 except Exception as e:
                     # Ultimate fallback: just return original content if anything fails
-                    logging.warning(f"Could not add suggestions due to error: {e}")
+                    self.logging.warning(f"Could not add suggestions due to error: {e}")
                     # Return original content unchanged
                     pass
         
@@ -582,9 +585,9 @@ class OrganizationInfoApp:
             
             if hasattr(self, 'neo4j_client'):
                 self.neo4j_client.close()
-                logging.info("Application cleanup completed with enhanced metrics and Google Sheets logging")
+                self.logging.info("Application cleanup completed with enhanced metrics and Google Sheets logging")
         except Exception as e:
-            logging.error(f"Error during cleanup: {str(e)}")
+            self.logging.error(f"Error during cleanup: {str(e)}")
     
     def get_stats(self):
         """
@@ -608,7 +611,7 @@ class OrganizationInfoApp:
                 'enhanced_metrics': enhanced_metrics_stats
             }
         except Exception as e:
-            logging.error(f"Error getting enhanced stats: {str(e)}")
+            self.logging.error(f"Error getting enhanced stats: {str(e)}")
             return {'error': str(e)}
         
 # --- Page Configuration ---

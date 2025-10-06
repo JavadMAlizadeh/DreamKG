@@ -82,10 +82,9 @@ class Config:
     @staticmethod
     def setup_logging_with_session_id(session_id):
         """Setup logging with session-specific log files using date and time."""
-
-        # Logging Configuration
+        
         LOG_DIRECTORY = "./logs/"
-
+        
         # Create directory if it doesn't exist
         os.makedirs(LOG_DIRECTORY, exist_ok=True)
         
@@ -93,14 +92,26 @@ class Config:
         timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
         log_filename = os.path.join(LOG_DIRECTORY, f"dreamkg_session_{timestamp}.log")
         
-        logging.basicConfig(
-            level=logging.INFO,
-            format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
-            handlers=[
-                logging.FileHandler(log_filename),  # ← WRITES TO FILE (same as before)            ]
-            ]
-        )
-        return log_filename
+        # Create a logger instance specific to this session
+        logger = logging.getLogger(f'dreamkg_session_{session_id}')
+        logger.setLevel(logging.INFO)
+        
+        # Remove any existing handlers to avoid duplicates
+        logger.handlers.clear()
+        
+        # Create file handler for this session
+        file_handler = logging.FileHandler(log_filename)
+        file_handler.setLevel(logging.INFO)
+        
+        # Create formatter
+        formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+        file_handler.setFormatter(formatter)
+        
+        # Add handler to logger
+        logger.addHandler(file_handler)
+        
+        # Store logger reference for this session
+        return log_filename, logger
 
     # Category order for multi-category queries
     CATEGORY_ORDER = [
