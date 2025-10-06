@@ -302,16 +302,6 @@ SPATIAL QUERY INSTRUCTIONS:
             )
             
             # Record Neo4j duration to metrics
-            if self.metrics and 'neo4j_duration' in query_result:
-                self.metrics.record_query_result(
-                    success=query_result['success'],
-                    result_count=len(query_result['results']) if query_result['results'] else 0,
-                    expanded_search=False,
-                    error_message=query_result.get('error'),
-                    cypher_query=query_result.get('cypher_query'),
-                    neo4j_duration=query_result['neo4j_duration']
-                )
-            
             if query_result['success'] and not query_result['results']:
                 # Try expanded radius if no results
                 logging.info("Attempting expanded radius search with predefined coordinates")
@@ -353,6 +343,17 @@ SPATIAL QUERY INSTRUCTIONS:
                         query_result['expanded_radius'] = True
                         query_result['closest_search'] = True
                         query_result.update(combined_metrics)
+
+            # NOW record metrics ONCE with correct expanded status
+            if self.metrics and 'neo4j_duration' in query_result:
+                self.metrics.record_query_result(
+                    success=query_result['success'],
+                    result_count=len(query_result['results']) if query_result['results'] else 0,
+                    expanded_search=query_result.get('expanded_radius', False),  # Now correctly reflects if expansion happened
+                    error_message=query_result.get('error'),
+                    cypher_query=query_result.get('cypher_query'),
+                    neo4j_duration=query_result['neo4j_duration']
+                )
             
             # Step 6: Update memory if we got results
             results = query_result['results']
@@ -790,7 +791,7 @@ SPATIAL QUERY INSTRUCTIONS:
             )
             
             # Add instruction to limit to just the closest result
-            closest_spatial_context += "\n\nSPECIAL INSTRUCTION: Return only the closest organization (LIMIT 1)"
+            closest_spatial_context += "\n\nSPECIAL INSTRUCTION: Return only the closest organization (LIMIT 5)"
             
             # Record spatial processing time
             spatial_start_time = time.time()
@@ -856,16 +857,16 @@ SPATIAL QUERY INSTRUCTIONS:
             closest_cypher_query = cypher_response.get('text', '')
             closest_cypher_query = self._clean_cypher_response(closest_cypher_query)
             
-            # Ensure the query has LIMIT 1 to get only the closest
+            # Ensure the query has LIMIT 5 to get only the closest
             if 'LIMIT' not in closest_cypher_query.upper():
-                # Add LIMIT 1 before ORDER BY if it exists, otherwise at the end
+                # Add LIMIT 5 before ORDER BY if it exists, otherwise at the end
                 if 'ORDER BY' in closest_cypher_query.upper():
                     closest_cypher_query = closest_cypher_query.replace(
                         'ORDER BY distance_miles ASC', 
-                        'ORDER BY distance_miles ASC\nLIMIT 1'
+                        'ORDER BY distance_miles ASC\nLIMIT 5'
                     )
                 else:
-                    closest_cypher_query += '\nLIMIT 1'
+                    closest_cypher_query += '\nLIMIT 5'
             
             logging.info(f"Generated closest organization Cypher Query:\n\n{closest_cypher_query}")
             

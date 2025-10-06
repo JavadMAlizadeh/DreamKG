@@ -375,97 +375,124 @@ class ResponseService:
         return self.generate_response(query, results, is_spatial=False, is_focused=False)
 
 
-# ===== ENHANCED DISPLAY FUNCTION FOR TWO-TIER =====
-def display_two_tier_response(response_data):
-    """
-    Display response using the enhanced two-tier structure.
-    
-    Args:
-        response_data: Response dict with short_view/long_view structure
-    """
-    import streamlit as st
-    
-    # Handle string responses
-    if isinstance(response_data, str):
-        st.markdown(response_data)
-        return
-    
-    # Check if this is a two-tier response
-    if isinstance(response_data, dict):
-        if response_data.get('display_mode') == 'two_tier':
-            # Display intro
-            if response_data.get('intro'):
-                st.markdown(response_data['intro'])
-                st.write("")
-            
-            # Display each organization with two-tier view
-            for org in response_data.get('organizations', []):
-                short = org.get('short_view', {})
-                long = org.get('long_view', {})
-                
-                # SHORT VIEW
-                st.markdown(f"**{short['number']}. {short['name']}**")
-                
-                # Build short info line
-                info_parts = []
-                if short.get('distance'):
-                    info_parts.append(f"📍 {short['distance']} miles")
-                if short.get('status'):
-                    emoji = "✅" if short['status'].lower() == "open" else "❌"
-                    info_parts.append(f"{emoji} {short['status']}")
-                if short.get('category'):
-                    info_parts.append(f"🏢 {short['category']}")
-                
-                if info_parts:
-                    st.markdown(" • ".join(info_parts))
-                
-                # Key services preview
-                if short.get('key_services'):
-                    services_text = ", ".join(short['key_services'])
-                    extra_count = short.get('total_services_count', 0) - len(short['key_services'])
-                    if extra_count > 0:
-                        services_text += f" (+{extra_count} more)"
-                    st.markdown(f"🎯 {services_text}")
-                
-                # EXPANDABLE LONG VIEW
-                with st.expander("➕ Show full details", expanded=False):
-                    if long.get('phone'):
-                        st.markdown(f"**📞 Phone:** {long['phone']}")
-                    if long.get('address'):
-                        st.markdown(f"**📍 Address:** {long['address']}")
-                    
-                    # Hours
-                    if long.get('hours'):
-                        st.markdown("**🕐 Hours:**")
-                        for day, time in long['hours'].items():
-                            if time.lower() == 'closed':
-                                st.markdown(f"  • {day}: *Closed*")
-                            else:
-                                st.markdown(f"  • {day}: {time}")
-                    
-                    # All services
-                    all_services = long.get('all_services', {})
-                    if all_services.get('free') or all_services.get('paid'):
-                        st.markdown("**🎯 All Services:**")
-                        
-                        if all_services.get('free'):
-                            st.markdown("  *Free Services:*")
-                            for service in all_services['free']:
-                                st.markdown(f"    • {service}")
-                        
-                        if all_services.get('paid'):
-                            st.markdown("  *Paid Services:*")
-                            for service in all_services['paid']:
-                                st.markdown(f"    • {service}")
-                
-                st.write("")
+    # ===== ENHANCED DISPLAY FUNCTION FOR TWO-TIER =====
+    def display_two_tier_response(response_data):
+        """
+        Display response using the enhanced two-tier structure.
         
-        elif response_data.get('type') == 'structured':
-            # Fallback to original structured display
-            st.markdown("Using fallback display...")
-            st.write(response_data)
+        Args:
+            response_data: Response dict with short_view/long_view structure
+        """
+        import streamlit as st
+        
+        # Handle string responses
+        if isinstance(response_data, str):
+            st.markdown(response_data)
+            return
+        
+        # Check if this is a two-tier response
+        if isinstance(response_data, dict):
+            if response_data.get('display_mode') == 'two_tier':
+                # Display intro
+                if response_data.get('intro'):
+                    st.markdown(response_data['intro'])
+                    st.write("")
+                
+                # Display each organization with two-tier view
+                for org in response_data.get('organizations', []):
+                    short = org.get('short_view', {})
+                    long = org.get('long_view', {})
+                    
+                    # SHORT VIEW
+                    st.markdown(f"**{short['number']}. {short['name']}**")
+                    
+                    # Build short info line
+                    info_parts = []
+                    if short.get('distance'):
+                        info_parts.append(f"📍 {short['distance']} miles")
+                    if short.get('status'):
+                        emoji = "✅" if short['status'].lower() == "open" else "❌"
+                        info_parts.append(f"{emoji} {short['status']}")
+                    if short.get('category'):
+                        info_parts.append(f"🏢 {short['category']}")
+                    
+                    if info_parts:
+                        st.markdown(" • ".join(info_parts))
+                    
+                    # Key services preview
+                    if short.get('key_services'):
+                        services_text = ", ".join(short['key_services'])
+                        extra_count = short.get('total_services_count', 0) - len(short['key_services'])
+                        if extra_count > 0:
+                            services_text += f" (+{extra_count} more)"
+                        st.markdown(f"🎯 {services_text}")
+                    
+                    # EXPANDABLE LONG VIEW
+                    with st.expander("➕ Show full details", expanded=False):
+                        if long.get('phone'):
+                            st.markdown(f"**📞 Phone:** {long['phone']}")
+                        if long.get('address'):
+                            st.markdown(f"**📍 Address:** {long['address']}")
+                        
+                        # Hours
+                        if long.get('hours'):
+                            st.markdown("**🕐 Hours:**")
+                            for day, time in long['hours'].items():
+                                if time.lower() == 'closed':
+                                    st.markdown(f"  • {day}: *Closed*")
+                                else:
+                                    st.markdown(f"  • {day}: {time}")
+                        
+                        # All services
+                        all_services = long.get('all_services', {})
+                        if all_services.get('free') or all_services.get('paid'):
+                            st.markdown("**🎯 All Services:**")
+                            
+                            if all_services.get('free'):
+                                st.markdown("  *Free Services:*")
+                                for service in all_services['free']:
+                                    st.markdown(f"    • {service}")
+                            
+                            if all_services.get('paid'):
+                                st.markdown("  *Paid Services:*")
+                                for service in all_services['paid']:
+                                    st.markdown(f"    • {service}")
+                    
+                    st.write("")
+            
+            elif response_data.get('type') == 'structured':
+                # Fallback to original structured display
+                st.markdown("Using fallback display...")
+                st.write(response_data)
+            else:
+                # Unknown format
+                st.markdown(str(response_data))
         else:
-            # Unknown format
             st.markdown(str(response_data))
-    else:
-        st.markdown(str(response_data))
+
+    def generate_suggestion_response(self, result_count, is_spatial=False, used_memory=False, 
+                                    expanded_radius=False, original_threshold=None, 
+                                    expanded_threshold=None):
+            """Generate helpful suggestions based on query results."""
+            suggestions = []
+            
+            if used_memory:
+                suggestions.append("💭 Memory: This answer is based on your previous query. Ask a new question to search again.")
+            
+            elif is_spatial:
+                if expanded_radius and original_threshold and expanded_threshold:
+                    suggestions.append(f"🔍 No organizations found within {original_threshold} miles. Expanded search to {expanded_threshold} miles...")
+                
+                if result_count > 3:
+                    suggestions.append(f"💡 Tip: Found {result_count} organizations. Try asking focused follow-up questions like 'What are their paid services?' or 'Do they have Wi-Fi?'")
+                elif result_count == 0:
+                    threshold = expanded_threshold or original_threshold or "the specified distance"
+                    suggestions.append(f"💡 Tip: No organizations found within {threshold} miles. Try expanding your search radius or check a different area.")
+            
+            else:
+                if result_count > 1:
+                    suggestions.append(f"💡 Tip: Found {result_count} organizations. Ask focused follow-up questions like 'What are their paid services?' or 'What are their hours on Monday?'")
+            
+            return "\n".join(suggestions) if suggestions else ""
+    
+    

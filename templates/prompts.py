@@ -146,7 +146,7 @@ MATCH vs OPTIONAL MATCH DECISION RULES - CRITICAL:
 22. **TIME QUERY EXAMPLES**:
     - "libraries open on Tuesday" → MATCH (o)-[:HAS_HOURS]->(t:Time) WHERE t.tuesday <> 'Closed'
     - "library on West Lehigh that has wi-fi on Tuesday" → MATCH (o)-[:HAS_HOURS]->(t:Time) WHERE t.tuesday <> 'Closed'
-    - "social security offices open after 5pm" → MATCH (o)-[:HAS_HOURS]->(t:Time) WHERE [time condition]
+    - "social security offices open after 5pm" → MATCH (o)-[:HAS_HOURS]->(t:Time) WHERE t.monday <> 'Closed' AND apoc.temporal.toZonedTemporal(SPLIT(t.monday, ' - ')[1], 'hh:mm a') >= apoc.temporal.toZonedTemporal('5:00 PM', 'hh:mm a')
     - "libraries" (no time mentioned) → OPTIONAL MATCH (o)-[:HAS_HOURS]->(t:Time)
 
 
@@ -229,7 +229,7 @@ WITH o, l, point({{longitude: toFloat(l.longitude), latitude: toFloat(l.latitude
 WITH o, l, round(point.distance(userPoint, orgPoint) / 1609.0 * 100) / 100 AS distance_miles
 WHERE distance_miles <= {distance_threshold}
 MATCH (o)-[:HAS_HOURS]->(t:Time)
-WHERE t.sunday <> 'Closed'
+WHERE t.sunday <> 'Closed' AND apoc.temporal.toZonedTemporal(SPLIT(t.sunday, ' - ')[1], 'hh:mm a') >= apoc.temporal.toZonedTemporal('5:00 PM', 'hh:mm a')
 MATCH (o)-[r:OFFERS]->(s:Service)
 RETURN
 o.name,
@@ -486,7 +486,7 @@ MATCH vs OPTIONAL MATCH DECISION RULES - CRITICAL:
 
 14. **TIME QUERY EXAMPLES**:
     - "libraries open on Sunday" → MATCH (o)-[:HAS_HOURS]->(t:Time) WHERE t.sunday <> 'Closed'
-    - "social security offices open after 5pm" → MATCH (o)-[:HAS_HOURS]->(t:Time) WHERE [time condition]
+    - "social security offices open after 5pm" → MATCH (o)-[:HAS_HOURS]->(t:Time) WHERE t.monday <> 'Closed' AND apoc.temporal.toZonedTemporal(SPLIT(t.monday, ' - ')[1], 'hh:mm a') >= apoc.temporal.toZonedTemporal('5:00 PM', 'hh:mm a')
     - "libraries" (no time mentioned) → OPTIONAL MATCH (o)-[:HAS_HOURS]->(t:Time)
 
 CYPHER SYNTAX RULES - CRITICAL:

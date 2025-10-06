@@ -1,5 +1,4 @@
-# Fixed the issue with disappearing the previous responses.
-# Fixed Cypher query issue.
+# Deployment.
 
 import streamlit as st
 import streamlit.components.v1 as components
@@ -1838,7 +1837,21 @@ if app:
         for day in days_of_week:
             if day in prompt_lower:
                 time_context = f" on {day.capitalize()}"
-                logging.info(f"Extracted time context from query: '{day}'")
+                
+                # Check for time-of-day requirements
+                if "after hours" in prompt_lower:
+                    time_context += " after 8pm"
+                    logging.info(f"Normalized 'after hours' to 'after 8pm'. Full context: '{time_context}'")
+                else:
+                    # ORIGINAL LOGIC for specific times like "after 5pm"
+                    time_of_day_pattern = r'(after|before|around|at)\s+(\d{1,2}(?::\d{2})?\s*(?:am|pm|AM|PM))'
+                    time_match = re.search(time_of_day_pattern, prompt)
+                    if time_match:
+                        time_phrase = time_match.group(0)
+                        time_context += f" {time_phrase}"
+                        logging.info(f"Extracted time context from query: '{day}' + '{time_phrase}'")
+                    else:
+                        logging.info(f"Extracted time context from query: '{day}'")
                 break
         
         # If no specific day, check for general time indicators
