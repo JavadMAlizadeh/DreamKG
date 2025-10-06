@@ -619,14 +619,16 @@ st.set_page_config(
     layout="centered",
 )
 
+# Replace the display_structured_response function with this version (starting around line 644)
+
 def display_structured_response(response_data, raw_data=None, user_query="", app_instance=None, message_index=None, start_coordinates=None, all_categories_data=None, current_category_index=None):
     """
     Display structured response with synchronized selection:
     - SHORT ANSWER: Shows the selected option
-    - EXPANDABLE OPTIONS: All options with CHECKBOXES for selection + complete details  
-    - EXPANDABLE DIRECTIONS: Dropdown + Maps + directions (synced with checkboxes)
+    - EXPANDABLE OPTIONS: All options with complete details (NO CHECKBOXES)
+    - EXPANDABLE DIRECTIONS: Dropdown + Maps + directions (synced with dropdown only)
     
-    FIXED: Proper synchronization between checkboxes, dropdown, and map
+    MODIFIED: Removed all checkboxes - selection only via dropdown
     """
     # Use the query passed to this function directly - no session state storage needed
     effective_user_query = user_query if user_query else ""
@@ -650,7 +652,7 @@ def display_structured_response(response_data, raw_data=None, user_query="", app
         # Get organization names for selection
         org_names = [org['name'] for org in organizations]
         
-        # SHARED SESSION STATE KEY - used by both checkboxes and dropdown
+        # SHARED SESSION STATE KEY - used by dropdown only now
         selection_key = f"destination_selector{key_suffix}"
         
         # Initialize selection if not set
@@ -823,7 +825,7 @@ def display_structured_response(response_data, raw_data=None, user_query="", app
         if short_text:
             st.markdown(short_text.rstrip('<br>'), unsafe_allow_html=True)
         
-        # ===== MORE OPTIONS SECTION - NO EXPANDER FOR INTERACTIVE ELEMENTS =====
+        # ===== MORE OPTIONS SECTION - NO CHECKBOXES =====
         # Show a simple toggle to control visibility instead of expander
         options_visible_key = f"show_options{key_suffix}"
         if options_visible_key not in st.session_state:
@@ -841,98 +843,67 @@ def display_structured_response(response_data, raw_data=None, user_query="", app
         # Show options if toggled on
         if st.session_state[options_visible_key]:
 
-            # Display ALL organizations with CHECKBOXES and complete details
+            # Display ALL organizations with complete details (NO CHECKBOXES)
             for org_idx, org in enumerate(organizations):
-                # Create checkbox key for this organization
-                checkbox_key = f"checkbox_{key_suffix}_{org_idx}"
-                
                 # Determine if this org is currently selected
                 is_selected = (org['name'] == st.session_state[selection_key])
                 
-                # Create columns
-                col_checkbox, col_content = st.columns([0.35, 9.65])
-                
-                with col_checkbox:
-                    # FIXED: Check if user tried to uncheck the selected item in previous run
-                    # If so, force it to stay checked by setting value=True
-                    force_checked = (checkbox_key in st.session_state and 
-                                   st.session_state.get(f"{checkbox_key}_force_checked", False))
-                    
-                    checked = st.checkbox(
-                        "",
-                        value=is_selected or force_checked,
-                        key=checkbox_key,
-                        label_visibility="collapsed"
-                    )
-                    
-                    # Clear the force flag after using it
-                    if f"{checkbox_key}_force_checked" in st.session_state:
-                        del st.session_state[f"{checkbox_key}_force_checked"]
-                    
-                    # SYNC: If checkbox state changed, update shared selection
-                    if checked and not is_selected:
-                        # User just checked this box - select this organization
-                        st.session_state[selection_key] = org['name']
-                        st.rerun()
-                    elif not checked and is_selected:
-                        # User tried to uncheck the selected box - prevent it in next run
-                        st.session_state[f"{checkbox_key}_force_checked"] = True
-                        st.rerun()
-                
-                with col_content:
-                    # Organization header
+                # Organization header - highlight if selected
+                if is_selected:
+                    st.markdown(f"➤ **{org['number']}. {org['name']}**")
+                else:
                     st.markdown(f"**{org['number']}. {org['name']}**")
-                    
-                    # All details
-                    full_text = ""
-                    
-                    # Distance
-                    if any('Distance:' in item for item in org.get('main_items', [])):
-                        distance_item = [item for item in org['main_items'] if 'Distance:' in item][0]
-                        full_text += f"● {distance_item}<br>"
-                    
-                    # Phone
-                    if any('Phone:' in item for item in org.get('main_items', [])):
-                        phone_item = [item for item in org['main_items'] if 'Phone:' in item][0]
-                        full_text += f"● {phone_item}<br>"
-                    
-                    # Address
-                    if any('Address:' in item for item in org.get('main_items', [])):
-                        address_item = [item for item in org['main_items'] if 'Address:' in item][0]
-                        full_text += f"● {address_item}<br>"
-                    
-                    # FULL ANSWER HOURS - ALWAYS show ALL hours regardless of query
-                    hours_full = org.get('hours', {})
-                    if hours_full:
-                        full_text += "● Hours:<br>"
-                        day_order = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday']
-                        for day in day_order:
-                            if day in hours_full:
-                                full_text += f"&nbsp;&nbsp;&nbsp;&nbsp;○ {day}: {hours_full[day]}<br>"
-                    
-                    # ALL Services
-                    services = org.get('services', {})
-                    all_free = services.get('free', [])
-                    all_paid = services.get('paid', [])
-                    
-                    if all_free or all_paid:
-                        full_text += "● Services:<br>"
-                        
-                        if all_free:
-                            for service in all_free:
-                                full_text += f"&nbsp;&nbsp;&nbsp;&nbsp;○ Free: {service}<br>"
-                        
-                        if all_paid:
-                            for service in all_paid:
-                                full_text += f"&nbsp;&nbsp;&nbsp;&nbsp;○ Paid: {service}<br>"
-                    
-                    # Display all information
-                    if full_text:
-                        st.markdown(full_text.rstrip('<br>'), unsafe_allow_html=True)
                 
-                st.write("")  # Original spacing between organizations (no lines)
+                # All details
+                full_text = ""
+                
+                # Distance
+                if any('Distance:' in item for item in org.get('main_items', [])):
+                    distance_item = [item for item in org['main_items'] if 'Distance:' in item][0]
+                    full_text += f"● {distance_item}<br>"
+                
+                # Phone
+                if any('Phone:' in item for item in org.get('main_items', [])):
+                    phone_item = [item for item in org['main_items'] if 'Phone:' in item][0]
+                    full_text += f"● {phone_item}<br>"
+                
+                # Address
+                if any('Address:' in item for item in org.get('main_items', [])):
+                    address_item = [item for item in org['main_items'] if 'Address:' in item][0]
+                    full_text += f"● {address_item}<br>"
+                
+                # FULL ANSWER HOURS - ALWAYS show ALL hours regardless of query
+                hours_full = org.get('hours', {})
+                if hours_full:
+                    full_text += "● Hours:<br>"
+                    day_order = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday']
+                    for day in day_order:
+                        if day in hours_full:
+                            full_text += f"&nbsp;&nbsp;&nbsp;&nbsp;○ {day}: {hours_full[day]}<br>"
+                
+                # ALL Services
+                services = org.get('services', {})
+                all_free = services.get('free', [])
+                all_paid = services.get('paid', [])
+                
+                if all_free or all_paid:
+                    full_text += "● Services:<br>"
+                    
+                    if all_free:
+                        for service in all_free:
+                            full_text += f"&nbsp;&nbsp;&nbsp;&nbsp;○ Free: {service}<br>"
+                    
+                    if all_paid:
+                        for service in all_paid:
+                            full_text += f"&nbsp;&nbsp;&nbsp;&nbsp;○ Paid: {service}<br>"
+                
+                # Display all information
+                if full_text:
+                    st.markdown(full_text.rstrip('<br>'), unsafe_allow_html=True)
+                
+                st.write("")  # Original spacing between organizations
         
-        # ===== DIRECTIONS SECTION - NO EXPANDER FOR INTERACTIVE ELEMENTS =====
+        # ===== DIRECTIONS SECTION - DROPDOWN ONLY (NO CHECKBOXES) =====
         if raw_data:
             # Show a simple toggle to control visibility instead of expander
             directions_visible_key = f"show_directions{key_suffix}"
@@ -1300,47 +1271,118 @@ def update_selection_from_dropdown(shared_key, dropdown_key):
     if dropdown_key in st.session_state:
         st.session_state[shared_key] = st.session_state[dropdown_key]
 
-def display_embedded_directions_for_all_organizations(
-    raw_data, 
-    user_query="", 
-    app_instance=None, 
-    message_index=None, 
-    start_coordinates=None, 
-    all_categories_data=None, 
-    current_category_index=None, 
-    shared_selection_key=None
-):
+def display_embedded_directions_for_all_organizations(raw_data, user_query="", app_instance=None, message_index=None, start_coordinates=None, all_categories_data=None, current_category_index=None, shared_selection_key=None):
     """
-    SIMPLIFIED VERSION: No dropdown - checkboxes control everything
+    FIXED VERSION: Proper synchronization with checkboxes and dynamic map updates
     """
     if not raw_data:
         return
     
+    # LIMIT TO TOP 10 RESULTS FOR DIRECTIONS
     limited_raw_data = raw_data[:10]
+    
+    # Create unique key suffix based on message index or current time
     key_suffix = f"_{message_index}" if message_index is not None else f"_{int(time.time() * 1000)}"
     
-    # LEG-SPECIFIC session state keys for custom location
+    # LEG-SPECIFIC session state keys
     custom_location_key = f"custom_start_location{key_suffix}"
     custom_location_name_key = f"custom_start_location_name{key_suffix}"
     
-    # USE THE SHARED SELECTION KEY
+    # USE THE SHARED SELECTION KEY passed from parent function
     if shared_selection_key is None:
+        # Fallback to creating our own if not passed (shouldn't happen)
         shared_selection_key = f"destination_selector{key_suffix}"
     
-    # Prepare organization data
-    org_data = {}
-    for record in limited_raw_data:
-        org_name = (
-            record.get('o.name') or 
-            record.get('name') or 
-            record.get('organizationName')
-        )
+    try:
+        # Extract user's mentioned location using existing spatial intelligence
+        query_location_text = extract_user_location_from_query(user_query, raw_data, app_instance)
         
-        if org_name:
-            lat = record.get('l.latitude') or record.get('latitude')
-            lon = record.get('l.longitude') or record.get('longitude')
+        # ============================================================================
+        # DYNAMIC ROUTING - Check if previous leg has a selection
+        # ============================================================================
+        dynamic_start_coordinates = None
+        previous_selection_info = None
+        
+        # Only apply dynamic routing if we have multi-category data and this isn't the first leg
+        if all_categories_data and current_category_index and current_category_index > 1:
+            # Build the key for the previous leg's selection
+            prev_leg_index = current_category_index - 1
+            # Extract message number from key_suffix (format: "_msgidx_catidx")
+            if "_" in str(message_index):
+                msg_num = str(message_index).split("_")[0]
+            else:
+                msg_num = str(message_index)
             
-            if lat is not None and lon is not None:
+            prev_leg_selection_key = f"destination_selector_{msg_num}_{prev_leg_index}"
+            
+            # Check if user made a selection in the previous leg
+            if prev_leg_selection_key in st.session_state:
+                selected_org_name = st.session_state[prev_leg_selection_key]
+                
+                # Get the previous leg's raw data
+                prev_leg_data = all_categories_data[prev_leg_index - 1]['raw_data']
+                
+                # Find the selected organization's coordinates
+                for record in prev_leg_data:
+                    org_name = (
+                        record.get('o.name') or 
+                        record.get('name') or 
+                        record.get('organizationName')
+                    )
+                    
+                    if org_name == selected_org_name:
+                        # Extract coordinates
+                        lat = record.get('l.latitude') or record.get('latitude')
+                        lon = record.get('l.longitude') or record.get('longitude')
+                        
+                        if lat and lon:
+                            dynamic_start_coordinates = (float(lat), float(lon))
+                            previous_selection_info = {
+                                'org_name': selected_org_name,
+                                'coordinates': dynamic_start_coordinates
+                            }
+                            logging.info(f"Dynamic routing: Using coordinates from {selected_org_name}: {dynamic_start_coordinates}")
+                            break
+        
+        # Override start_coordinates if we found a dynamic route
+        if dynamic_start_coordinates:
+            start_coordinates = dynamic_start_coordinates
+        
+        # If we found a location in the query and haven't set a custom location yet, use it as default
+        if query_location_text and 'custom_start_location' not in st.session_state:
+            # Use the app's spatial intelligence for geocoding if available
+            if app_instance and hasattr(app_instance, 'spatial_intel'):
+                query_coordinates = app_instance.spatial_intel.geocode_location(query_location_text)
+                if query_coordinates:
+                    st.session_state.query_location = query_coordinates
+                    st.session_state.query_location_name = query_location_text
+                    st.session_state.query_location_text = query_location_text
+            else:
+                # Fallback to our geocoding function
+                query_lat, query_lon, query_full_address = geocode_start_location(query_location_text)
+                if query_lat and query_lon:
+                    st.session_state.query_location = (query_lat, query_lon)
+                    st.session_state.query_location_name = query_full_address or query_location_text
+                    st.session_state.query_location_text = query_location_text
+        
+        # Prepare organization data with geocoded addresses
+        org_options = []  # Will store "1. Org Name" format
+        org_name_to_display = {}  # Maps actual name to display format
+        org_data = {}  # Maps actual name to data
+        
+        org_number = 1  # Counter for numbering
+        for record in limited_raw_data:
+            # Get organization name from different possible formats
+            org_name = (
+                record.get('o.name') or 
+                record.get('name') or 
+                record.get('organizationName') or 
+                (record.get('org', {}).get('name') if isinstance(record.get('org'), dict) else record.get('org')) or
+                (record.get('o', {}).get('name') if isinstance(record.get('o'), dict) else record.get('o'))
+            )
+            
+            if org_name:
+                # Try to get address information
                 address = (
                     record.get('l.street') or 
                     record.get('street') or 
@@ -1351,13 +1393,13 @@ def display_embedded_directions_for_all_organizations(
                 city = (
                     record.get('l.city') or 
                     record.get('city') or
-                    'Philadelphia'
+                    'Philadelphia'  # Default city
                 )
                 
                 state = (
                     record.get('l.state') or 
                     record.get('state') or 
-                    'PA'
+                    'PA'  # Default state
                 )
                 
                 zipcode = (
@@ -1367,180 +1409,286 @@ def display_embedded_directions_for_all_organizations(
                     ''
                 )
                 
-                full_address = f"{address}, {city}, {state} {zipcode}".strip() if address else f"{city}, {state}"
-                
-                org_data[org_name] = {
-                    'lat': float(lat),
-                    'lon': float(lon),
-                    'address': full_address,
-                    'record': record
-                }
-    
-    if not org_data:
-        st.warning("No organizations with valid addresses found for directions.")
-        return
-    
-    # Get current selection from shared key
-    selected_org_name = st.session_state.get(shared_selection_key)
-    
-    # Validate selection exists in data
-    if selected_org_name not in org_data:
-        selected_org_name = list(org_data.keys())[0]
-        st.session_state[shared_selection_key] = selected_org_name
-    
-    # Get selected org info
-    org_info = org_data[selected_org_name]
-    lat, lon = org_info['lat'], org_info['lon']
-    
-    # ===== STARTING LOCATION =====
-    default_location_text = ""
-    placeholder_text = "e.g., 1234 Market Street, Philadelphia"
-    
-    if custom_location_key in st.session_state and st.session_state[custom_location_key]:
-        custom_lat, custom_lon = st.session_state[custom_location_key]
-        default_location_text = st.session_state.get(custom_location_name_key, f"Custom ({custom_lat:.4f}, {custom_lon:.4f})")
-        placeholder_text = f"Custom location: {default_location_text}"
-    elif start_coordinates and start_coordinates != st.session_state.get('user_location'):
-        start_lat, start_lon = start_coordinates
-        default_location_text = f"Previous Stop ({start_lat:.4f}, {start_lon:.4f})"
-        placeholder_text = f"Starting from previous stop: {start_lat:.4f}, {start_lon:.4f}"
-    elif 'user_location' in st.session_state and st.session_state.user_location:
-        user_lat, user_lon = st.session_state.user_location
-        default_location_text = f"My Location ({user_lat:.4f}, {user_lon:.4f})"
-        placeholder_text = f"Using your location: {user_lat:.4f}, {user_lon:.4f}"
-    elif 'query_location_text' in st.session_state:
-        default_location_text = st.session_state.query_location_text
-        placeholder_text = f"From query: {st.session_state.query_location_text}"
-    
-    col1, col2 = st.columns([4, 1])
-    with col1:
-        help_text = "You can change this starting point if needed"
-        if 'user_location' in st.session_state and st.session_state.user_location:
-            help_text = "Using your actual location. You can override this with a custom address."
+                # Get coordinates directly from the record (already in Neo4j data)
+                lat = record.get('l.latitude') or record.get('latitude')
+                lon = record.get('l.longitude') or record.get('longitude')
+
+                if lat is not None and lon is not None:
+                    # Build address for display
+                    address = (
+                        record.get('l.street') or 
+                        record.get('street') or 
+                        record.get('streetAddress') or 
+                        record.get('address')
+                    )
+                    
+                    city = (
+                        record.get('l.city') or 
+                        record.get('city') or
+                        'Philadelphia'
+                    )
+                    
+                    state = (
+                        record.get('l.state') or 
+                        record.get('state') or 
+                        'PA'
+                    )
+                    
+                    zipcode = (
+                        record.get('l.zipcode') or 
+                        record.get('zipcode') or 
+                        record.get('zipCode') or 
+                        ''
+                    )
+                    
+                    # Build full address for display
+                    full_address = f"{address}, {city}, {state} {zipcode}".strip() if address else f"{city}, {state}"
+                    
+                    # Create numbered display format
+                    display_name = f"{org_number}. {org_name}"
+                    
+                    org_options.append(display_name)
+                    org_name_to_display[org_name] = display_name
+                    org_data[org_name] = {
+                        'lat': float(lat),
+                        'lon': float(lon),
+                        'address': full_address,
+                        'record': record,
+                        'display_name': display_name
+                    }
+                    
+                    org_number += 1
         
-        custom_address = st.text_input(
-            "○ Starting location:",
-            value=default_location_text,
-            placeholder=placeholder_text,
-            key=f"start_location_all_orgs{key_suffix}",
-            help=help_text,
-            label_visibility="visible"
-        )
-    with col2:
-        st.markdown("<br>", unsafe_allow_html=True)
-        button_text = "Update" if default_location_text else "Set Location"
-        set_location = st.button(button_text, key=f"set_start_all_orgs{key_suffix}", use_container_width=True)
-    
-    if set_location and custom_address:
-        with st.spinner("Processing location..."):
-            start_lat, start_lon, full_address = geocode_start_location(custom_address)
+        if not org_options:
+            st.warning("No organizations with valid addresses found for directions.")
+            return
+        
+        # FIXED: Get current selection from SHARED key
+        current_selection = st.session_state.get(shared_selection_key)
+        
+        # Find the display name and index for current selection
+        default_index = 0
+        if current_selection:
+            if current_selection in org_name_to_display:
+                # Current selection is actual org name, get its display format
+                display_selection = org_name_to_display[current_selection]
+                if display_selection in org_options:
+                    default_index = org_options.index(display_selection)
+            elif current_selection in org_options:
+                # Current selection is already in display format
+                default_index = org_options.index(current_selection)
+        
+        # Extract actual org name from display format (remove "1. " prefix)
+        selected_display = org_options[default_index]
+        selected_org = selected_display.split(". ", 1)[1] if ". " in selected_display else selected_display
+        
+        if selected_org and selected_org in org_data:
+            org_info = org_data[selected_org]
+            lat, lon = org_info['lat'], org_info['lon']
             
-            if start_lat and start_lon:
-                st.session_state[custom_location_key] = (start_lat, start_lon)
-                st.session_state[custom_location_name_key] = full_address or custom_address
-                logging.info(f"Custom start location set for leg {key_suffix}: {full_address or custom_address}")
-                st.rerun()
+            # Determine what to show in the text input placeholder and value
+            default_location_text = ""
+            placeholder_text = "e.g., 1234 Market Street, Philadelphia"
+
+            # Priority-based location text for input field
+            if custom_location_key in st.session_state and st.session_state[custom_location_key]:
+                # THIS LEG has a custom location
+                custom_lat, custom_lon = st.session_state[custom_location_key]
+                default_location_text = st.session_state.get(custom_location_name_key, f"Custom ({custom_lat:.4f}, {custom_lon:.4f})")
+                placeholder_text = f"Custom location: {default_location_text}"
+            elif start_coordinates and start_coordinates != st.session_state.get('user_location'):
+                # Using optimized routing coordinates (from previous stop)
+                start_lat, start_lon = start_coordinates
+                default_location_text = f"Previous Stop ({start_lat:.4f}, {start_lon:.4f})"
+                placeholder_text = f"Starting from previous stop: {start_lat:.4f}, {start_lon:.4f}"
+            elif 'user_location' in st.session_state and st.session_state.user_location:
+                # User's actual location is available
+                user_lat, user_lon = st.session_state.user_location
+                default_location_text = f"My Location ({user_lat:.4f}, {user_lon:.4f})"
+                placeholder_text = f"Using your location: {user_lat:.4f}, {user_lon:.4f}"
+            elif 'query_location_text' in st.session_state:
+                # Query-based location
+                default_location_text = st.session_state.query_location_text
+                placeholder_text = f"From query: {st.session_state.query_location_text}"
+
+            
+            # ===== STARTING LOCATION (TOP) =====
+            col1, col2 = st.columns([4, 1])
+            with col1:
+                # Show different help text based on what location we're using
+                help_text = "You can change this starting point if needed"
+                if 'user_location' in st.session_state and st.session_state.user_location:
+                    help_text = "Using your actual location. You can override this with a custom address."
+                
+                custom_address = st.text_input(
+                    "○ Starting location:",
+                    value=default_location_text,
+                    placeholder=placeholder_text,
+                    key=f"start_location_all_orgs{key_suffix}",
+                    help=help_text,
+                    label_visibility="visible"
+                )
+            with col2:
+                st.markdown("<br>", unsafe_allow_html=True)
+                # Change button text based on context
+                button_text = "Update" if default_location_text else "Set Location"
+                set_location = st.button(button_text, key=f"set_start_all_orgs{key_suffix}", use_container_width=True)
+            
+            # Handle location update button
+            if set_location and custom_address:
+                with st.spinner("Processing location..."):
+                    start_lat, start_lon, full_address = geocode_start_location(custom_address)
+                    
+                    if start_lat and start_lon:
+                        # Store in leg-specific session state keys
+                        st.session_state[custom_location_key] = (start_lat, start_lon)
+                        st.session_state[custom_location_name_key] = full_address or custom_address
+                        logging.info(f"Custom start location set for leg {key_suffix}: {full_address or custom_address}")
+                        st.rerun()
+                    else:
+                        st.error("Could not find that location. Please try a different address or coordinates.")
+                        logging.error(f"Failed to geocode: {custom_address}")
+
+            # ===== DESTINATION DROPDOWN - FIXED SYNCHRONIZATION =====
+            # CRITICAL FIX: Check if dropdown selection differs from shared state
+            # If so, update shared state and force immediate rerun
+            temp_dropdown_key = f"dropdown_temp{key_suffix}"
+            
+            # Get what's currently selected in the dropdown (if it exists from previous render)
+            if temp_dropdown_key in st.session_state:
+                temp_selected_display = st.session_state[temp_dropdown_key]
+                temp_selected_org = temp_selected_display.split(". ", 1)[1] if ". " in temp_selected_display else temp_selected_display
+                
+                # If dropdown selection differs from shared selection, sync and rerun
+                if temp_selected_org != st.session_state.get(shared_selection_key):
+                    logging.info(f"Dropdown out of sync: '{temp_selected_org}' vs shared '{st.session_state.get(shared_selection_key)}'")
+                    st.session_state[shared_selection_key] = temp_selected_org
+                    st.rerun()  # FORCE IMMEDIATE RERUN
+            
+            # Render the dropdown with current selection
+            selected_display_new = st.selectbox(
+                "⚑ Destination:",
+                options=org_options,
+                index=default_index,
+                key=temp_dropdown_key,
+                label_visibility="visible"
+            )
+            
+            # Extract actual org name from current dropdown selection
+            selected_org_new = selected_display_new.split(". ", 1)[1] if ". " in selected_display_new else selected_display_new
+            
+            # Use the newly selected org if it's in our data
+            if selected_org_new in org_data:
+                selected_org = selected_org_new
+                org_info = org_data[selected_org]
+                lat, lon = org_info['lat'], org_info['lon']
+
+            # Get user location for directions (after potential update)
+            user_lat, user_lon = get_user_location_for_directions(start_coordinates, leg_key_suffix=key_suffix)
+            
+            # Transportation mode selector (simplified) with unique keys
+            col1, col2, col3, col4 = st.columns(4)
+
+            with col1:
+                driving = st.button("🚗 Driving", key=f"driving_all_orgs{key_suffix}", use_container_width=True)
+            with col2:
+                walking = st.button("🚶🏽 Walking", key=f"walking_all_orgs{key_suffix}", use_container_width=True)
+            with col3:
+                cycling = st.button("🚴‍♀️ Cycling", key=f"cycling_all_orgs{key_suffix}", use_container_width=True)
+            with col4:
+                transit = st.button("🚆 Transit", key=f"transit_all_orgs{key_suffix}", use_container_width=True)
+
+            # Determine transportation mode
+            if driving:
+                transport_mode = "driving"
+                st.session_state["global_transport_mode"] = "driving"
+            elif cycling:
+                transport_mode = "bicycling"
+                st.session_state["global_transport_mode"] = "bicycling"
+            elif transit:
+                transport_mode = "transit"
+                st.session_state["global_transport_mode"] = "transit"
+            elif walking:
+                transport_mode = "walking"
+                st.session_state["global_transport_mode"] = "walking"
             else:
-                st.error("Could not find that location. Please try a different address or coordinates.")
-                logging.error(f"Failed to geocode: {custom_address}")
-    
-    # ===== DESTINATION - NO DROPDOWN! Just show selected =====
-    st.markdown(
-    f'<p style="font-size:14px; font-family: Source Sans Pro; padding: 0.25rem 0px; margin-bottom: 0.5rem;">'
-    f'⚑ Destination: {selected_org_name}'
-    f'</p>',
-    unsafe_allow_html=True
-)
-    
-    # ===== TRANSPORTATION MODE =====
-    col1, col2, col3, col4 = st.columns(4)
-    
-    with col1:
-        driving = st.button("🚗 Driving", key=f"driving_all_orgs{key_suffix}", use_container_width=True)
-    with col2:
-        walking = st.button("🚶🏽 Walking", key=f"walking_all_orgs{key_suffix}", use_container_width=True)
-    with col3:
-        cycling = st.button("🚴‍♀️ Cycling", key=f"cycling_all_orgs{key_suffix}", use_container_width=True)
-    with col4:
-        transit = st.button("🚆 Transit", key=f"transit_all_orgs{key_suffix}", use_container_width=True)
-    
-    # Determine transportation mode
-    if driving:
-        transport_mode = "driving"
-        st.session_state["global_transport_mode"] = "driving"
-    elif cycling:
-        transport_mode = "bicycling"
-        st.session_state["global_transport_mode"] = "bicycling"
-    elif transit:
-        transport_mode = "transit"
-        st.session_state["global_transport_mode"] = "transit"
-    elif walking:
-        transport_mode = "walking"
-        st.session_state["global_transport_mode"] = "walking"
-    else:
-        transport_mode = st.session_state.get("global_transport_mode", "driving")
-    
-    # Get user location for directions
-    user_lat, user_lon = get_user_location_for_directions(start_coordinates, leg_key_suffix=key_suffix)
-    
-    # ===== DISPLAY MAP =====
-    google_api_key = getattr(Config, 'GOOGLE_MAPS_API_KEY', None)
-    
-    if google_api_key:
-        directions_url = f"https://www.google.com/maps/embed/v1/directions?key={google_api_key}&origin={user_lat},{user_lon}&destination={lat},{lon}&mode={transport_mode}"
-    else:
-        directions_url = f"https://maps.google.com/maps?saddr={user_lat},{user_lon}&daddr={lat},{lon}&dirflg={'w' if transport_mode == 'walking' else 'r' if transport_mode == 'transit' else 'b' if transport_mode == 'bicycling' else 'd'}&output=embed"
-    
-    try:
-        # Display directions map
-        st.markdown(f"""
-        <div style="border: 2px solid #e0e0e0; border-radius: 8px; overflow: hidden; box-shadow: 0 2px 4px rgba(0,0,0,0.1); margin-bottom: 15px;">
-            <iframe 
-                src="{directions_url}" 
-                width="100%" 
-                height="{DIRECTIONS_HEIGHT}" 
-                style="border:0;" 
-                allowfullscreen="" 
-                loading="lazy" 
-                referrerpolicy="no-referrer-when-downgrade">
-            </iframe>
-        </div>
-        """, unsafe_allow_html=True)
-        
-        # Street View
-        street_view_embed_url = f"https://www.google.com/maps/embed?pb=!1m0!4v1723910100000!6m8!1m7!1sCAoSLEFGMVFpcE5fU3lzY1Z3b1hXZ2ZkR0hGd2VnU0Z1dHlJZ1F4b2Z0b2J3!2m2!1d{lat}!2d{lon}!3f75!4f0!5f0.78"
-        
-        st.components.v1.html(
-            f"""
-            <iframe
-              src="{street_view_embed_url}"
-              width="100%"
-              height="600"
-              style="border:0;"
-              allowfullscreen=""
-              loading="lazy"
-              referrerpolicy="no-referrer-when-downgrade">
-            </iframe>
-            """,
-            height=600,
-        )
-        
+                # Check if we have a saved global mode, default to driving
+                transport_mode = st.session_state.get("global_transport_mode", "driving")
+
+
+            # Create directions embed URL with transportation mode
+            google_api_key = getattr(Config, 'GOOGLE_MAPS_API_KEY', None)
+            
+            if google_api_key:
+                # Use Google Maps Directions API embed (FREE)
+                directions_url = f"https://www.google.com/maps/embed/v1/directions?key={google_api_key}&origin={user_lat},{user_lon}&destination={lat},{lon}&mode={transport_mode}"
+            else:
+                # Fallback directions embed with mode
+                directions_url = f"https://maps.google.com/maps?saddr={user_lat},{user_lon}&daddr={lat},{lon}&dirflg={'w' if transport_mode == 'walking' else 'r' if transport_mode == 'transit' else 'b' if transport_mode == 'bicycling' else 'd'}&output=embed"
+            
+            try:
+                # Display directions map
+                st.markdown(f"""
+                <div style="border: 2px solid #e0e0e0; border-radius: 8px; overflow: hidden; box-shadow: 0 2px 4px rgba(0,0,0,0.1); margin-bottom: 15px;">
+                    <iframe 
+                        src="{directions_url}" 
+                        width="100%" 
+                        height="{DIRECTIONS_HEIGHT}" 
+                        style="border:0;" 
+                        allowfullscreen="" 
+                        loading="lazy" 
+                        referrerpolicy="no-referrer-when-downgrade">
+                    </iframe>
+                </div>
+                """, unsafe_allow_html=True)
+                
+                # Embed Street View
+                street_view_embed_url = f"https://www.google.com/maps/embed?pb=!1m0!4v1723910100000!6m8!1m7!1sCAoSLEFGMVFpcE5fU3lzY1Z3b1hXZ2ZkR0hGd2VnU0Z1dHlJZ1F4b2Z0b2J3!2m2!1d{lat}!2d{lon}!3f75!4f0!5f0.78"
+                
+                st.components.v1.html(
+                    f"""
+                    <iframe
+                      src="{street_view_embed_url}"
+                      width="100%"
+                      height="600"
+                      style="border:0;"
+                      allowfullscreen=""
+                      loading="lazy"
+                      referrerpolicy="no-referrer-when-downgrade">
+                    </iframe>
+                    """,
+                    height=600,
+                )
+                
+            except Exception as e:
+                # Fallback directions display
+                st.error("Directions embed failed. Here are alternative options:")
+                
+                col1, col2 = st.columns(2)
+                
+                with col1:
+                    st.markdown(f"""
+                    **🚗 Driving Directions:**
+                        [Open in Google Maps](https://www.google.com/maps/dir/?api=1&origin={user_lat},{user_lon}&destination={lat},{lon}&travelmode={transport_mode})
+                    """)
+                
+                with col2:
+                    st.markdown(f"""
+                    **🗺️ Street View:**
+                    [View Location](https://www.google.com/maps/@{lat},{lon},3a,75y,0h,90t/data=!3m7!1e1!3m5!1s!2e0!6s!7i13312!8i6656)
+                    """)
+                
+                # Show basic route information
+                st.markdown(f"""
+                <div style="padding: 15px; background-color: #f0f2f6; border-radius: 8px; margin-top: 10px;">
+                    <h4>Route Summary</h4>
+                    <p><strong>To:</strong> {selected_org}</p>
+                </div>
+                """, unsafe_allow_html=True)
+            
     except Exception as e:
-        st.error("Directions embed failed. Here are alternative options:")
-        
-        col1, col2 = st.columns(2)
-        
-        with col1:
-            st.markdown(f"""
-            **🚗 Driving Directions:**
-            [Open in Google Maps](https://www.google.com/maps/dir/?api=1&origin={user_lat},{user_lon}&destination={lat},{lon}&travelmode={transport_mode})
-            """)
-        
-        with col2:
-            st.markdown(f"""
-            **🗺️ Street View:**
-            [View Location](https://www.google.com/maps/@{lat},{lon},3a,75y,0h,90t/data=!3m7!1e1!3m5!1s!2e0!6s!7i13312!8i6656)
-            """)
+        st.error(f"Error displaying directions: {e}")
+        logging.error(f"Directions error: {str(e)}")
 
 # --- Geocoding Function with Caching ---
 @st.cache_data
