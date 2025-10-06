@@ -37,6 +37,10 @@ class OrganizationInfoApp:
         # Setup logging with unique session ID - NOW GETS BOTH FILENAME AND LOGGER
         self.log_filename, self.session_logger = Config.setup_logging_with_session_id(session_id)
         Config.validate_config()
+
+        logging.root.handlers = []  # Clear existing handlers
+        logging.root.addHandler(logging.FileHandler(self.log_filename))
+        logging.root.setLevel(logging.INFO)
         
         # Log initialization start using SESSION LOGGER
         self.session_logger.info("=" * 60)
