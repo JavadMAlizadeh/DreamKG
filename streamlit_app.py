@@ -619,6 +619,7 @@ st.set_page_config(
     layout="centered",
 )
 
+
 def display_structured_response(response_data, raw_data=None, user_query="", app_instance=None, message_index=None, start_coordinates=None, all_categories_data=None, current_category_index=None):
     """
     Display structured response with synchronized selection:
@@ -823,24 +824,8 @@ def display_structured_response(response_data, raw_data=None, user_query="", app
         if short_text:
             st.markdown(short_text.rstrip('<br>'), unsafe_allow_html=True)
         
-        # ===== MORE OPTIONS SECTION - NO EXPANDER FOR INTERACTIVE ELEMENTS =====
-        # Show a simple toggle to control visibility instead of expander
-        options_visible_key = f"show_options{key_suffix}"
-        if options_visible_key not in st.session_state:
-            st.session_state[options_visible_key] = False
-        
-        # Toggle button outside any expander
-        if st.button(
-            "➖ Hide options" if st.session_state[options_visible_key] else "➕ More options",
-            key=f"toggle_options{key_suffix}",
-            use_container_width=True
-        ):
-            st.session_state[options_visible_key] = not st.session_state[options_visible_key]
-            st.rerun()
-        
-        # Show options if toggled on
-        if st.session_state[options_visible_key]:
-
+        # ===== EXPANDABLE OPTIONS - All organizations with CHECKBOXES =====
+        with st.expander("More options...", expanded=False):
             # Display ALL organizations with CHECKBOXES and complete details
             for org_idx, org in enumerate(organizations):
                 # Create checkbox key for this organization
@@ -932,24 +917,9 @@ def display_structured_response(response_data, raw_data=None, user_query="", app
                 
                 st.write("")  # Original spacing between organizations (no lines)
         
-        # ===== DIRECTIONS SECTION - NO EXPANDER FOR INTERACTIVE ELEMENTS =====
+        # ===== SEPARATE EXPANDABLE DIRECTIONS - Dropdown + Maps =====
         if raw_data:
-            # Show a simple toggle to control visibility instead of expander
-            directions_visible_key = f"show_directions{key_suffix}"
-            if directions_visible_key not in st.session_state:
-                st.session_state[directions_visible_key] = False
-            
-            # Toggle button outside any expander
-            if st.button(
-                "➖ Hide directions" if st.session_state[directions_visible_key] else "➕ Get directions",
-                key=f"toggle_directions{key_suffix}",
-                use_container_width=True
-            ):
-                st.session_state[directions_visible_key] = not st.session_state[directions_visible_key]
-                st.rerun()
-            
-            # Show directions if toggled on
-            if st.session_state[directions_visible_key]:
+            with st.expander("Get directions...", expanded=False):
                 # Call the directions function with all parameters
                 display_embedded_directions_for_all_organizations(
                     raw_data=raw_data,
@@ -1556,27 +1526,24 @@ def display_embedded_directions_for_all_organizations(raw_data, user_query="", a
                         logging.error(f"Failed to geocode: {custom_address}")
 
             # ===== DESTINATION DROPDOWN - FIXED SYNCHRONIZATION =====
-            # CRITICAL FIX: Check if dropdown selection differs from shared state
-            # If so, update shared state and force immediate rerun
-            temp_dropdown_key = f"dropdown_temp{key_suffix}"
+            # Use on_change callback to update shared selection
+            def handle_dropdown_change():
+                """Handle dropdown selection change and sync to shared state"""
+                dropdown_key = f"dropdown_temp{key_suffix}"
+                if dropdown_key in st.session_state:
+                    selected_display = st.session_state[dropdown_key]
+                    # Extract actual org name from display format
+                    selected_org_name = selected_display.split(". ", 1)[1] if ". " in selected_display else selected_display
+                    # Update shared selection key
+                    st.session_state[shared_selection_key] = selected_org_name
+                    logging.info(f"Dropdown changed: Selected '{selected_org_name}', updated shared key '{shared_selection_key}'")
             
-            # Get what's currently selected in the dropdown (if it exists from previous render)
-            if temp_dropdown_key in st.session_state:
-                temp_selected_display = st.session_state[temp_dropdown_key]
-                temp_selected_org = temp_selected_display.split(". ", 1)[1] if ". " in temp_selected_display else temp_selected_display
-                
-                # If dropdown selection differs from shared selection, sync and rerun
-                if temp_selected_org != st.session_state.get(shared_selection_key):
-                    logging.info(f"Dropdown out of sync: '{temp_selected_org}' vs shared '{st.session_state.get(shared_selection_key)}'")
-                    st.session_state[shared_selection_key] = temp_selected_org
-                    st.rerun()  # FORCE IMMEDIATE RERUN
-            
-            # Render the dropdown with current selection
             selected_display_new = st.selectbox(
                 "⚑ Destination:",
                 options=org_options,
                 index=default_index,
-                key=temp_dropdown_key,
+                key=f"dropdown_temp{key_suffix}",
+                on_change=handle_dropdown_change,  # SYNC ON CHANGE
                 label_visibility="visible"
             )
             
