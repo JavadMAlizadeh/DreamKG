@@ -34,8 +34,8 @@ class OrganizationInfoApp:
         
         self.session_id = session_id
         
-        # Setup logging with session ID
-        self.log_filename = Config.setup_logging_with_session_id(session_id)
+        # Setup logging with unique session ID - NOW GETS BOTH FILENAME AND LOGGER
+        self.log_filename, self.session_logger = Config.setup_logging_with_session_id(session_id)
         Config.validate_config()
         
         # Initialize enhanced metrics collector first

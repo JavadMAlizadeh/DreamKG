@@ -81,7 +81,7 @@ class Config:
     
     @classmethod
     def setup_logging_with_session_id(cls, session_id):
-        """Setup logging with guaranteed unique filename per session."""
+        """Setup logging with guaranteed unique filename per session WITHOUT affecting global config."""
         
         # Create directory if it doesn't exist
         os.makedirs(cls.LOG_DIRECTORY, exist_ok=True)
@@ -91,18 +91,31 @@ class Config:
         random_component = str(uuid.uuid4())[:8]
         log_filename = f"{cls.LOG_DIRECTORY}{timestamp}_{session_id[:8]}_{random_component}_app.log"
         
-        # Configure logging for this session with force=True to override existing config
-        logging.basicConfig(
-            level=cls.LOG_LEVEL,
-            format=cls.LOG_FORMAT,
-            handlers=[
-                logging.FileHandler(log_filename)
-            ],
-            force=True
-        )
+        # Create a dedicated logger for this session instead of reconfiguring basicConfig
+        logger = logging.getLogger(f"session_{session_id}")
+        logger.setLevel(cls.LOG_LEVEL)
         
-        return log_filename
-    
+        # Remove any existing handlers to avoid duplicates
+        for handler in logger.handlers[:]:
+            logger.removeHandler(handler)
+        
+        # Create file handler for this session only
+        file_handler = logging.FileHandler(log_filename)
+        file_handler.setLevel(cls.LOG_LEVEL)
+        
+        # Create formatter and add it to the handler
+        formatter = logging.Formatter(cls.LOG_FORMAT)
+        file_handler.setFormatter(formatter)
+        
+        # Add the handler to the logger
+        logger.addHandler(file_handler)
+        
+        # Prevent propagation to root logger to avoid duplicate logging
+        logger.propagate = False
+        
+        return log_filename, logger
+
+
     # Category order for multi-category queries
     CATEGORY_ORDER = [
         "Food Bank",
