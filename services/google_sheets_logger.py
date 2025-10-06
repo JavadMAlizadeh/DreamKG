@@ -18,7 +18,7 @@ class GoogleSheetsLogger:
     
     def __init__(self):
         """Initialize the Google Sheets logger with service account credentials."""
-        self.credentials_path = Config.GOOGLE_CREDENTIALS_PATH
+        self.credentials = Config.GOOGLE_CREDENTIALS
         self.sheet_name = Config.GOOGLE_SHEET_NAME
         self.worksheet_name = Config.GOOGLE_WORKSHEET_NAME
         
@@ -40,13 +40,8 @@ class GoogleSheetsLogger:
                 'https://www.googleapis.com/auth/drive'
             ]
             
-            # Load credentials from service account file
-            if not os.path.exists(self.credentials_path):
-                logging.error(f"Google credentials file not found at: {self.credentials_path}")
-                return
-            
-            # Authenticate using service account
-            creds = Credentials.from_service_account_file(self.credentials_path, scopes=scope)
+            # Authenticate using service account info from Streamlit secrets
+            creds = Credentials.from_service_account_info(self.credentials, scopes=scope)
             self.gc = gspread.authorize(creds)
             
             # Open the spreadsheet

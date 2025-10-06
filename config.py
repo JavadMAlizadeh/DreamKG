@@ -26,7 +26,7 @@ class Config:
     LLM_TEMPERATURE = 2
 
     # Google Sheets Configuration
-    GOOGLE_CREDENTIALS_PATH = dict(st.secrets["google_credentials"])
+    GOOGLE_CREDENTIALS = dict(st.secrets["google_credentials"])
     GOOGLE_SHEET_NAME = "DreamKGLogs"
     GOOGLE_WORKSHEET_NAME = "Session_Logs" 
     
