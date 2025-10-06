@@ -80,7 +80,7 @@ class Config:
 
         # Logging Configuration
         LOG_DIRECTORY = "./logs/"
-        LOG_FORMAT = '%(asctime)s - %(levelname)s - %(message)s'
+        LOG_FORMAT = '%(asctime)s - %(name)s - %(levelname)s - %(message)s'
         LOG_LEVEL = logging.INFO
 
         # Create directory if it doesn't exist
@@ -90,13 +90,24 @@ class Config:
         timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
         log_filename = os.path.join(LOG_DIRECTORY, f"dreamkg_session_{timestamp}.log")
         
-        logging.basicConfig(
-            level=logging.INFO,
-            format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
-            handlers=[
-                logging.FileHandler(log_filename),  # ← WRITES TO FILE (same as before)            ]
-            ]
-        )
+        # Get the root logger
+        logger = logging.getLogger()
+        logger.setLevel(LOG_LEVEL)
+        
+        # Remove existing handlers to avoid duplicates
+        logger.handlers.clear()
+        
+        # Create file handler
+        file_handler = logging.FileHandler(log_filename)
+        file_handler.setLevel(LOG_LEVEL)
+        file_handler.setFormatter(logging.Formatter(LOG_FORMAT))
+        
+        # Add the file handler
+        logger.addHandler(file_handler)
+        
+        logging.info(f"Logging configured for session: {session_id}")
+        logging.info(f"Log file: {log_filename}")
+        
         return log_filename
     
     # Category order for multi-category queries
