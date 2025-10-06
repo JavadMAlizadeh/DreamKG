@@ -74,6 +74,10 @@ class Config:
         'blocks', 'vicinity', 'area', 'location', 'from', 'to'
     ]
     
+    # Logging Configuration
+    LOG_DIRECTORY = "./logs/"
+    LOG_FORMAT = '%(asctime)s - %(levelname)s - %(message)s'
+    LOG_LEVEL = logging.INFO
     
     @classmethod
     def setup_logging_with_session_id(cls, session_id):
