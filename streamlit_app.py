@@ -833,7 +833,7 @@ def display_structured_response(response_data, raw_data=None, user_query="", app
         
         # Toggle button outside any expander
         if st.button(
-            "－ Hide Information" if st.session_state[options_visible_key] else "＋ More Information",
+            "－ Hide information" if st.session_state[options_visible_key] else "＋ More information",
             key=f"toggle_options{key_suffix}",
             use_container_width=True
         ):
