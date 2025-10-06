@@ -1258,7 +1258,7 @@ def geocode_start_location(address):
         
         # Pattern 3: Regular address - proceed with geocoding
         geolocator = Nominatim(user_agent="dream_kg_directions_app", timeout=10)
-        time.sleep(1)  # Rate limiting
+        time.sleep(2)  # Rate limiting
         
         # Add Philadelphia context for better results
         search_query = f"{address}, Philadelphia, PA" if "Philadelphia" not in address else address
