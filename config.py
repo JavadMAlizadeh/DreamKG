@@ -82,8 +82,9 @@ class Config:
     @classmethod
     def setup_logging_with_session_id(cls, session_id):
         """Setup logging with guaranteed unique filename per session WITHOUT affecting global config."""
+        import os
+        from datetime import datetime
         
-        # Create directory if it doesn't exist
         os.makedirs(cls.LOG_DIRECTORY, exist_ok=True)
         
         # Use session ID + timestamp + random component for absolute uniqueness
@@ -91,13 +92,13 @@ class Config:
         random_component = str(uuid.uuid4())[:8]
         log_filename = f"{cls.LOG_DIRECTORY}{timestamp}_{session_id[:8]}_{random_component}_app.log"
         
-        # Create a dedicated logger for this session instead of reconfiguring basicConfig
-        logger = logging.getLogger(f"session_{session_id}")
+        # Create a dedicated logger for this session
+        logger_name = f"session_{session_id}"
+        logger = logging.getLogger(logger_name)
         logger.setLevel(cls.LOG_LEVEL)
         
         # Remove any existing handlers to avoid duplicates
-        for handler in logger.handlers[:]:
-            logger.removeHandler(handler)
+        logger.handlers = []
         
         # Create file handler for this session only
         file_handler = logging.FileHandler(log_filename)
@@ -112,6 +113,12 @@ class Config:
         
         # Prevent propagation to root logger to avoid duplicate logging
         logger.propagate = False
+        
+        # Test the logger immediately
+        logger.info("=" * 50)
+        logger.info(f"SESSION LOGGER INITIALIZED for session: {session_id}")
+        logger.info(f"Log file: {log_filename}")
+        logger.info("=" * 50)
         
         return log_filename, logger
 

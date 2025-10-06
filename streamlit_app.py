@@ -38,21 +38,32 @@ class OrganizationInfoApp:
         self.log_filename, self.session_logger = Config.setup_logging_with_session_id(session_id)
         Config.validate_config()
         
+        # Log initialization start using SESSION LOGGER
+        self.session_logger.info("=" * 60)
+        self.session_logger.info(f"INITIALIZING OrganizationInfoApp for session: {self.session_id}")
+        self.session_logger.info("=" * 60)
+        
         # Initialize enhanced metrics collector first
         self.metrics = MetricsCollector(session_id=session_id)
+        self.session_logger.info("Metrics collector initialized")
 
-        # Initialize Google Sheets logger
+        # Initialize Google Sheets logger - USE SESSION LOGGER
         try:
             self.sheets_logger = GoogleSheetsLogger()
-            logging.info("Google Sheets logger initialized successfully")
+            self.session_logger.info("Google Sheets logger initialized successfully")  # CHANGED THIS LINE
         except Exception as e:
-            logging.warning(f"Failed to initialize Google Sheets logger: {str(e)}")
+            self.session_logger.warning(f"Failed to initialize Google Sheets logger: {str(e)}")  # CHANGED THIS LINE
             self.sheets_logger = None
         
-        # Initialize core components
+        # Initialize core components - USE SESSION LOGGER
         self.spatial_intel = SpatialIntelligence()
+        self.session_logger.info("Spatial intelligence initialized")  # ADD THIS LINE
+        
         self.memory = ConversationMemory()
+        self.session_logger.info("Conversation memory initialized")  # ADD THIS LINE
+        
         self.neo4j_client = Neo4jClient()
+        self.session_logger.info("Neo4j client initialized")  # ADD THIS LINE
         
         # Initialize services with enhanced metrics integration
         self.query_service = QueryService(
@@ -61,9 +72,14 @@ class OrganizationInfoApp:
             self.memory,
             self.metrics  # Pass enhanced metrics collector to query service
         )
-        self.response_service = ResponseService()
+        self.session_logger.info("Query service initialized")  # ADD THIS LINE
         
-        logging.info(f"OrganizationInfoApp initialized for session: {self.session_id}")
+        self.response_service = ResponseService()
+        self.session_logger.info("Response service initialized")  # ADD THIS LINE
+        
+        # Final initialization message - USE SESSION LOGGER
+        self.session_logger.info(f"OrganizationInfoApp initialization COMPLETED for session: {self.session_id}")  # CHANGED THIS LINE
+        self.session_logger.info("=" * 60)
     
     def log_session_to_sheets(self):
         """Log the current session data to Google Sheets."""
