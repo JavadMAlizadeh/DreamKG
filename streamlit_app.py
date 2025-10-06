@@ -86,14 +86,18 @@ class OrganizationInfoApp:
         return self.log_filename
 
     def read_log_file(self):
-        """Read the current log file content."""
+        """Read the current session's log file content - SECURE VERSION."""
         try:
-            import os
-            if os.path.exists(self.log_filename):
-                with open(self.log_filename, 'r', encoding='utf-8') as f:
-                    return f.read()
+            # SECURITY FIX: Only read this specific session's log file
+            if hasattr(self, 'log_filename') and os.path.exists(self.log_filename):
+                # Double-check this is the right session's file
+                if self.session_id in self.log_filename:
+                    with open(self.log_filename, 'r', encoding='utf-8') as f:
+                        return f.read()
+                else:
+                    return "Session log not available due to security mismatch."
             else:
-                return "Log file not found."
+                return "Log file not found for this session."
         except Exception as e:
             return f"Error reading log file: {str(e)}"
     
