@@ -2,6 +2,7 @@ import os
 import logging
 from datetime import datetime
 import streamlit as st
+import uuid
 
 # ==============================================================================
 # Environment Variables
@@ -74,35 +75,27 @@ class Config:
     ]
     
     
-    @staticmethod
-    def setup_logging_with_session_id(session_id):
-        """Setup logging with session-specific log files using date and time."""
-
-        # Logging Configuration
-        LOG_DIRECTORY = "./logs/"
-        LOG_FORMAT = '%(asctime)s - %(levelname)s - %(message)s'
-        LOG_LEVEL = logging.INFO
-
+    @classmethod
+    def setup_logging_with_session_id(cls, session_id):
+        """Setup logging with guaranteed unique filename per session."""
+        
         # Create directory if it doesn't exist
-        os.makedirs(LOG_DIRECTORY, exist_ok=True)
+        os.makedirs(cls.LOG_DIRECTORY, exist_ok=True)
         
-        # Use date and time for the session filename
-        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-        log_filename = os.path.join(LOG_DIRECTORY, f"dreamkg_session_{timestamp}.log")
+        # Use session ID + timestamp + random component for absolute uniqueness
+        timestamp = datetime.now().strftime("%Y-%m-%d_%H-%M-%S-%f")[:-3]
+        random_component = str(uuid.uuid4())[:8]
+        log_filename = f"{cls.LOG_DIRECTORY}{timestamp}_{session_id[:8]}_{random_component}_app.log"
         
-        # Only configure if not already configured
-        if not logging.getLogger().handlers:
-            logging.basicConfig(
-                level=LOG_LEVEL,
-                format=LOG_FORMAT,
-                handlers=[logging.FileHandler(log_filename)]
-            )
-        else:
-            # Add file handler to existing logger
-            file_handler = logging.FileHandler(log_filename)
-            file_handler.setLevel(LOG_LEVEL)
-            file_handler.setFormatter(logging.Formatter(LOG_FORMAT))
-            logging.getLogger().addHandler(file_handler)
+        # Configure logging for this session with force=True to override existing config
+        logging.basicConfig(
+            level=cls.LOG_LEVEL,
+            format=cls.LOG_FORMAT,
+            handlers=[
+                logging.FileHandler(log_filename)
+            ],
+            force=True
+        )
         
         return log_filename
     

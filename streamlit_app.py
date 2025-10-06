@@ -10,6 +10,7 @@ from geopy.distance import geodesic
 import time
 import os
 import re
+import uuid
 from config import Config
 from models.spatial_intelligence import SpatialIntelligence
 from models.conversation_memory import ConversationMemory
@@ -29,7 +30,6 @@ class OrganizationInfoApp:
         """Initialize the application with enhanced metrics tracking."""
         # Generate session ID if not provided
         if session_id is None:
-            import uuid
             session_id = str(uuid.uuid4())
         
         self.session_id = session_id
