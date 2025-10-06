@@ -1438,35 +1438,55 @@ def display_embedded_directions_for_all_organizations(raw_data, user_query="", a
                     ''
                 )
                 
-                if address:
-                    # Build full address
-                    full_address = f"{address}"
-                    if city:
-                        full_address += f", {city}"
-                    if state:
-                        full_address += f", {state}"
-                    if zipcode:
-                        full_address += f" {zipcode}"
+                # Get coordinates directly from the record (already in Neo4j data)
+                lat = record.get('l.latitude') or record.get('latitude')
+                lon = record.get('l.longitude') or record.get('longitude')
+
+                if lat is not None and lon is not None:
+                    # Build address for display
+                    address = (
+                        record.get('l.street') or 
+                        record.get('street') or 
+                        record.get('streetAddress') or 
+                        record.get('address')
+                    )
                     
-                    full_address = full_address.strip()
+                    city = (
+                        record.get('l.city') or 
+                        record.get('city') or
+                        'Philadelphia'
+                    )
                     
-                    # Try to geocode this address
-                    lat, lon = geocode_address(full_address, org_name)
-                    if lat is not None and lon is not None:
-                        # Create numbered display format
-                        display_name = f"{org_number}. {org_name}"
-                        
-                        org_options.append(display_name)
-                        org_name_to_display[org_name] = display_name
-                        org_data[org_name] = {
-                            'lat': lat,
-                            'lon': lon,
-                            'address': full_address,
-                            'record': record,
-                            'display_name': display_name
-                        }
-                        
-                        org_number += 1  # Increment counter
+                    state = (
+                        record.get('l.state') or 
+                        record.get('state') or 
+                        'PA'
+                    )
+                    
+                    zipcode = (
+                        record.get('l.zipcode') or 
+                        record.get('zipcode') or 
+                        record.get('zipCode') or 
+                        ''
+                    )
+                    
+                    # Build full address for display
+                    full_address = f"{address}, {city}, {state} {zipcode}".strip() if address else f"{city}, {state}"
+                    
+                    # Create numbered display format
+                    display_name = f"{org_number}. {org_name}"
+                    
+                    org_options.append(display_name)
+                    org_name_to_display[org_name] = display_name
+                    org_data[org_name] = {
+                        'lat': float(lat),
+                        'lon': float(lon),
+                        'address': full_address,
+                        'record': record,
+                        'display_name': display_name
+                    }
+                    
+                    org_number += 1
         
         if not org_options:
             st.warning("No organizations with valid addresses found for directions.")
