@@ -1257,7 +1257,10 @@ def geocode_start_location(address):
                 return None, None, None
         
         # Pattern 3: Regular address - proceed with geocoding
-        geolocator = Nominatim(user_agent="dream_kg_directions_app", timeout=10)
+        geolocator = Nominatim(
+            user_agent="dreamkg_app/1.0 (javad.mohammadalizadeh@gmail.com)",
+            timeout=10
+        )
         time.sleep(2)  # Rate limiting
         
         # Add Philadelphia context for better results
