@@ -79,49 +79,28 @@ class Config:
     LOG_FORMAT = '%(asctime)s - %(levelname)s - %(message)s'
     LOG_LEVEL = logging.INFO
     
-    @classmethod
-    def setup_logging_with_session_id(cls, session_id):
-        """Setup logging with guaranteed unique filename per session WITHOUT affecting global config."""
-        import os
-        from datetime import datetime
-        
-        os.makedirs(cls.LOG_DIRECTORY, exist_ok=True)
-        
-        # Use session ID + timestamp + random component for absolute uniqueness
-        timestamp = datetime.now().strftime("%Y-%m-%d_%H-%M-%S-%f")[:-3]
-        random_component = str(uuid.uuid4())[:8]
-        log_filename = f"{cls.LOG_DIRECTORY}{timestamp}_{session_id[:8]}_{random_component}_app.log"
-        
-        # Create a dedicated logger for this session
-        logger_name = f"session_{session_id}"
-        logger = logging.getLogger(logger_name)
-        logger.setLevel(cls.LOG_LEVEL)
-        
-        # Remove any existing handlers to avoid duplicates
-        logger.handlers = []
-        
-        # Create file handler for this session only
-        file_handler = logging.FileHandler(log_filename)
-        file_handler.setLevel(cls.LOG_LEVEL)
-        
-        # Create formatter and add it to the handler
-        formatter = logging.Formatter(cls.LOG_FORMAT)
-        file_handler.setFormatter(formatter)
-        
-        # Add the handler to the logger
-        logger.addHandler(file_handler)
-        
-        # Prevent propagation to root logger to avoid duplicate logging
-        logger.propagate = False
-        
-        # Test the logger immediately
-        logger.info("=" * 50)
-        logger.info(f"SESSION LOGGER INITIALIZED for session: {session_id}")
-        logger.info(f"Log file: {log_filename}")
-        logger.info("=" * 50)
-        
-        return log_filename, logger
+    @staticmethod
+    def setup_logging_with_session_id(session_id):
+        """Setup logging with session-specific log files using date and time."""
 
+        # Logging Configuration
+        LOG_DIRECTORY = "./logs/"
+
+        # Create directory if it doesn't exist
+        os.makedirs(LOG_DIRECTORY, exist_ok=True)
+        
+        # Use date and time for the session filename
+        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+        log_filename = os.path.join(LOG_DIRECTORY, f"dreamkg_session_{timestamp}.log")
+        
+        logging.basicConfig(
+            level=logging.INFO,
+            format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+            handlers=[
+                logging.FileHandler(log_filename),  # ← WRITES TO FILE (same as before)            ]
+            ]
+        )
+        return log_filename
 
     # Category order for multi-category queries
     CATEGORY_ORDER = [
