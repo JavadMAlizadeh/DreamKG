@@ -626,6 +626,8 @@ def display_structured_response(response_data, raw_data=None, user_query="", app
     - SHORT ANSWER: Shows the selected option
     - EXPANDABLE OPTIONS: All options with CHECKBOXES for selection + complete details  
     - EXPANDABLE DIRECTIONS: Dropdown + Maps + directions (synced with checkboxes)
+    
+    FIXED: Proper synchronization between checkboxes, dropdown, and map
     """
     # Use the query passed to this function directly - no session state storage needed
     effective_user_query = user_query if user_query else ""
@@ -926,7 +928,8 @@ def display_structured_response(response_data, raw_data=None, user_query="", app
                     message_index=message_index,
                     start_coordinates=start_coordinates,
                     all_categories_data=all_categories_data,
-                    current_category_index=current_category_index
+                    current_category_index=current_category_index,
+                    shared_selection_key=selection_key  # PASS THE SHARED KEY
                 )
     
     else:
@@ -1264,7 +1267,10 @@ def update_selection_from_dropdown(shared_key, dropdown_key):
     if dropdown_key in st.session_state:
         st.session_state[shared_key] = st.session_state[dropdown_key]
 
-def display_embedded_directions_for_all_organizations(raw_data, user_query="", app_instance=None, message_index=None, start_coordinates=None, all_categories_data=None, current_category_index=None):
+def display_embedded_directions_for_all_organizations(raw_data, user_query="", app_instance=None, message_index=None, start_coordinates=None, all_categories_data=None, current_category_index=None, shared_selection_key=None):
+    """
+    FIXED VERSION: Proper synchronization with checkboxes and dynamic map updates
+    """
     if not raw_data:
         return
     
@@ -1278,8 +1284,10 @@ def display_embedded_directions_for_all_organizations(raw_data, user_query="", a
     custom_location_key = f"custom_start_location{key_suffix}"
     custom_location_name_key = f"custom_start_location_name{key_suffix}"
     
-    # SHARED Selection key (same as used by checkboxes)
-    selection_key = f"destination_selector{key_suffix}"
+    # USE THE SHARED SELECTION KEY passed from parent function
+    if shared_selection_key is None:
+        # Fallback to creating our own if not passed (shouldn't happen)
+        shared_selection_key = f"destination_selector{key_suffix}"
     
     try:
         # Extract user's mentioned location using existing spatial intelligence
@@ -1431,12 +1439,11 @@ def display_embedded_directions_for_all_organizations(raw_data, user_query="", a
             st.warning("No organizations with valid addresses found for directions.")
             return
         
-        # DROPDOWN SELECTOR - SYNCED with checkboxes via shared selection_key
-        # Determine the default index based on current selection
-        default_index = 0
-        current_selection = st.session_state.get(selection_key)
+        # FIXED: Get current selection from SHARED key
+        current_selection = st.session_state.get(shared_selection_key)
         
-        # Find the display name for current selection
+        # Find the display name and index for current selection
+        default_index = 0
         if current_selection:
             if current_selection in org_name_to_display:
                 # Current selection is actual org name, get its display format
@@ -1448,11 +1455,8 @@ def display_embedded_directions_for_all_organizations(raw_data, user_query="", a
                 default_index = org_options.index(current_selection)
         
         # Extract actual org name from display format (remove "1. " prefix)
-        if org_options:
-            selected_display = org_options[default_index]
-            selected_org = selected_display.split(". ", 1)[1] if ". " in selected_display else selected_display
-        else:
-            selected_org = None
+        selected_display = org_options[default_index]
+        selected_org = selected_display.split(". ", 1)[1] if ". " in selected_display else selected_display
         
         if selected_org and selected_org in org_data:
             org_info = org_data[selected_org]
@@ -1521,24 +1525,32 @@ def display_embedded_directions_for_all_organizations(raw_data, user_query="", a
                         st.error("Could not find that location. Please try a different address or coordinates.")
                         logging.error(f"Failed to geocode: {custom_address}")
 
-            # ===== DESTINATION (BELOW STARTING LOCATION) =====
+            # ===== DESTINATION DROPDOWN - FIXED SYNCHRONIZATION =====
+            # Use on_change callback to update shared selection
+            def handle_dropdown_change():
+                """Handle dropdown selection change and sync to shared state"""
+                dropdown_key = f"dropdown_temp{key_suffix}"
+                if dropdown_key in st.session_state:
+                    selected_display = st.session_state[dropdown_key]
+                    # Extract actual org name from display format
+                    selected_org_name = selected_display.split(". ", 1)[1] if ". " in selected_display else selected_display
+                    # Update shared selection key
+                    st.session_state[shared_selection_key] = selected_org_name
+                    logging.info(f"Dropdown changed: Selected '{selected_org_name}', updated shared key '{shared_selection_key}'")
+            
             selected_display_new = st.selectbox(
-                "⚑ Destination:",  # This is the pin/map marker
+                "⚑ Destination:",
                 options=org_options,
                 index=default_index,
-                key=f"dropdown_{selection_key}",
+                key=f"dropdown_temp{key_suffix}",
+                on_change=handle_dropdown_change,  # SYNC ON CHANGE
                 label_visibility="visible"
             )
             
-            # Extract actual org name from display format (remove "1. " prefix)
+            # Extract actual org name from current dropdown selection
             selected_org_new = selected_display_new.split(". ", 1)[1] if ". " in selected_display_new else selected_display_new
             
-            # SYNC: Update shared selection if dropdown changed
-            if selected_org_new != st.session_state.get(selection_key):
-                st.session_state[selection_key] = selected_org_new
-                st.rerun()
-            
-            # Use the newly selected org if it changed
+            # Use the newly selected org if it's in our data
             if selected_org_new in org_data:
                 selected_org = selected_org_new
                 org_info = org_data[selected_org]
