@@ -35,7 +35,7 @@ class OrganizationInfoApp:
         self.session_id = session_id
         
         # Setup logging with session ID
-        self.log_filename = Config.setup_logging_with_session_id(session_id)
+        self.log_filename, self.logger = Config.setup_logging_with_session_id(session_id)
         Config.validate_config()
         
         # Initialize enhanced metrics collector first
@@ -140,10 +140,6 @@ class OrganizationInfoApp:
         Returns:
             tuple: (formatted_response, raw_data)
         """
-        # DEBUG: Force a log write
-        logging.info(f"🔵 PROCESS_REQUEST_CALLED: {user_query}")
-        print(f"🔵 CONSOLE: Processing query: {user_query}")  # This goes to console
-
         # Log user location information
         if user_location:
             logging.info(f"User location received: Latitude: {user_location[0]}, Longitude: {user_location[1]}")
@@ -1107,31 +1103,6 @@ def get_session_app():
 
 app = get_session_app()
 
-# DEBUG: Check logging configuration
-if app:
-    st.sidebar.markdown("### 🔍 Debug Info")
-    st.sidebar.write(f"**Session ID:** `{app.session_id[:8]}...`")
-    st.sidebar.write(f"**Log File:** `{app.log_filename}`")
-    st.sidebar.write(f"**File Exists:** {os.path.exists(app.log_filename)}")
-    
-    # Check file size
-    if os.path.exists(app.log_filename):
-        file_size = os.path.getsize(app.log_filename)
-        st.sidebar.write(f"**File Size:** {file_size} bytes")
-    
-    # Check logging handlers
-    root_logger = logging.getLogger()
-    st.sidebar.write(f"**Root Logger Handlers:** {len(root_logger.handlers)}")
-    for i, handler in enumerate(root_logger.handlers):
-        st.sidebar.write(f"  - Handler {i}: {type(handler).__name__}")
-        if isinstance(handler, logging.FileHandler):
-            st.sidebar.write(f"    - File: {handler.baseFilename}")
-    
-    # Test write
-    if st.sidebar.button("Test Log Write"):
-        logging.info("🧪 TEST LOG WRITE FROM SIDEBAR BUTTON")
-        st.sidebar.success("Test log written!")
-        st.rerun()
 
 # --- Configuration for Directions ---
 DIRECTIONS_HEIGHT = 500  # Height for directions iframe
