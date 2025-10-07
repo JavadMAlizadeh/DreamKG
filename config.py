@@ -77,7 +77,7 @@ class Config:
     
     @staticmethod
     def setup_logging_with_session_id(session_id):
-        """Setup logging with session-specific log files using date and time."""
+        """Setup logging with session-specific log files using session ID."""
 
         # Logging Configuration
         LOG_DIRECTORY = "./logs/"
@@ -85,9 +85,8 @@ class Config:
         # Create directory if it doesn't exist
         os.makedirs(LOG_DIRECTORY, exist_ok=True)
         
-        # Use date and time for the session filename
-        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-        log_filename = os.path.join(LOG_DIRECTORY, f"dreamkg_session_{timestamp}.log")
+        # Use session ID for unique filename per user
+        log_filename = os.path.join(LOG_DIRECTORY, f"dreamkg_session_{session_id}.log")
         
         logging.basicConfig(
             level=logging.INFO,

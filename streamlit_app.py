@@ -1083,7 +1083,6 @@ get_user_location()
 st.markdown("---")
 
 # --- Application Initialization ---
-@st.cache_resource
 def get_session_app():
     """Get or create app instance for current session with proper isolation."""
     if 'app_instance' not in st.session_state:
