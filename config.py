@@ -78,34 +78,31 @@ class Config:
     @staticmethod
     def setup_logging_with_session_id(session_id):
         """Setup logging with session-specific log files using session ID."""
-        
+
         # Logging Configuration
         LOG_DIRECTORY = "./logs/"
-        
+
         # Create directory if it doesn't exist
         os.makedirs(LOG_DIRECTORY, exist_ok=True)
         
         # Use session ID for unique filename per user
         log_filename = os.path.join(LOG_DIRECTORY, f"dreamkg_session_{session_id}.log")
         
-        # Create a session-specific logger instead of using root logger
-        logger = logging.getLogger(session_id)
-        logger.setLevel(logging.INFO)
+        # Get root logger
+        root_logger = logging.getLogger()
+        root_logger.setLevel(logging.INFO)
         
-        # Clear any existing handlers
-        logger.handlers = []
+        # Remove all existing handlers
+        root_logger.handlers = []
         
-        # Add file handler for this session only
+        # Add new file handler for this session
         file_handler = logging.FileHandler(log_filename)
         file_handler.setFormatter(
             logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
         )
-        logger.addHandler(file_handler)
+        root_logger.addHandler(file_handler)
         
-        # Don't propagate to root logger (this is critical!)
-        logger.propagate = False
-        
-        return log_filename, logger  # Return BOTH filename and logger
+        return log_filename
     
     # Category order for multi-category queries
     CATEGORY_ORDER = [
