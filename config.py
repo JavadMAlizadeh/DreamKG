@@ -77,30 +77,30 @@ class Config:
     
     @staticmethod
     def setup_logging_with_session_id(session_id):
-        """Setup logging with session-specific log files using session ID."""
-
+        """Setup logging with guaranteed unique filename per session."""
+        import uuid
+        from datetime import datetime
+        
         # Logging Configuration
         LOG_DIRECTORY = "./logs/"
-
+        
         # Create directory if it doesn't exist
         os.makedirs(LOG_DIRECTORY, exist_ok=True)
         
-        # Use session ID for unique filename per user
-        log_filename = os.path.join(LOG_DIRECTORY, f"dreamkg_session_{session_id}.log")
+        # Use session ID + timestamp + random component for absolute uniqueness
+        timestamp = datetime.now().strftime("%Y-%m-%d_%H-%M-%S-%f")[:-3]
+        random_component = str(uuid.uuid4())[:8]
+        log_filename = os.path.join(LOG_DIRECTORY, f"{timestamp}_{session_id[:8]}_{random_component}_app.log")
         
-        # Get root logger
-        root_logger = logging.getLogger()
-        root_logger.setLevel(logging.INFO)
-        
-        # Remove all existing handlers
-        root_logger.handlers = []
-        
-        # Add new file handler for this session
-        file_handler = logging.FileHandler(log_filename)
-        file_handler.setFormatter(
-            logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+        # Configure logging for this session
+        logging.basicConfig(
+            level=logging.INFO,
+            format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+            handlers=[
+                logging.FileHandler(log_filename)
+            ],
+            force=True  # Override any existing configuration
         )
-        root_logger.addHandler(file_handler)
         
         return log_filename
     
