@@ -92,15 +92,25 @@ class Config:
         random_component = str(uuid.uuid4())[:8]
         log_filename = os.path.join(LOG_DIRECTORY, f"{timestamp}_{session_id[:8]}_{random_component}_app.log")
         
-        # Configure logging for this session
-        logging.basicConfig(
-            level=logging.INFO,
-            format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
-            handlers=[
-                logging.FileHandler(log_filename)
-            ],
-            force=True  # Override any existing configuration
-        )
+        # Create a unique logger for this session
+        logger_name = f"app_logger_{session_id}"
+        logger = logging.getLogger(logger_name)
+        
+        # Clear any existing handlers to avoid duplicates
+        logger.handlers.clear()
+        logger.setLevel(logging.INFO)
+        
+        # Create file handler for this session
+        file_handler = logging.FileHandler(log_filename)
+        file_handler.setLevel(logging.INFO)
+        formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+        file_handler.setFormatter(formatter)
+        
+        logger.addHandler(file_handler)
+        
+        # Set this as the root logger for this session
+        logging.root.handlers = [file_handler]
+        logging.root.setLevel(logging.INFO)
         
         return log_filename
     
