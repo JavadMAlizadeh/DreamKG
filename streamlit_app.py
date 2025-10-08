@@ -1064,17 +1064,16 @@ st.markdown("---")
 # This ensures no space appears between header and welcome text
 
 st.markdown("""
-Welcome! Ask a question about **Food Banks**, **Mental Health Centers**, **Shelters**, **Public Libraries**, and **Social Security offices** in Philadelphia.
+Welcome! Ask a question about **Food Banks**, **Mental Health Services**, **Shelters**, **Public Libraries**, and **Social Security offices** in Philadelphia.
 
 **Examples:**
-* Do you know if there’s a library on West Lehigh Avenue with free Wi-Fi on Tuesdays?
-* Can you help me find a mental health center nearby?
-* I’m looking for food, a library where I can print a document, and somewhere to stay.
+* Is there a library on West Lehigh Avenue with free Wi-Fi on Tuesdays?
+* Can you help me find a mental health service nearby?
+* Help me to find some food, a library where I can print a document, and somewhere to stay.
 
 **Before You Continue:**
-* Please enable location access to view results near you.<br>        
-* Options are sorted by proximity to your target location.<br>
-* Your session activity will be securely logged and transmitted to our servers to support monitoring and service improvements.
+* Please enable location access to view results near to your target location.<br>        
+* The questions will be used to improve performance. No personal information will be collected.
 """, unsafe_allow_html=True)
 
 # Request user location after the welcome message to avoid any spacing issues
