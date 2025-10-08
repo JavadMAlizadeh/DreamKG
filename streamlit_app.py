@@ -1069,7 +1069,7 @@ Welcome! Ask a question about **Food Banks**, **Mental Health Services**, **Shel
 **Examples:**
 * Is there a library on West Lehigh Avenue with free Wi-Fi on Tuesdays?
 * Can you help me find a mental health service nearby?
-* Help me to find some food, a library where I can print a document, and somewhere to stay.
+* Help me find some food, a library where I can print a document, and a place to stay.
 
 **Before You Continue:**
 * Please enable location access to view results near to your target location.<br>        
