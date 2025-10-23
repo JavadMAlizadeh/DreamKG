@@ -5,7 +5,6 @@ This version prepares data specifically for collapsible display.
 
 import logging
 import re
-from langchain.chains import LLMChain
 from langchain_groq import ChatGroq
 from config import Config
 from templates.prompts import PromptTemplateFactory
@@ -29,9 +28,9 @@ class ResponseService:
         self.simple_qa_prompt = PromptTemplateFactory.create_simple_qa_prompt()
         
         # Initialize LLM chains
-        self.focused_qa_chain = LLMChain(llm=self.llm, prompt=self.focused_qa_prompt)
-        self.spatial_qa_chain = LLMChain(llm=self.llm, prompt=self.spatial_qa_prompt)
-        self.simple_qa_chain = LLMChain(llm=self.llm, prompt=self.simple_qa_prompt)
+        self.focused_qa_chain = self.focused_qa_prompt | self.llm
+        self.spatial_qa_chain = self.spatial_qa_prompt | self.llm
+        self.simple_qa_chain = self.simple_qa_prompt | self.llm
         
         logging.info("ResponseService initialized with two-tier display support")
     
@@ -81,7 +80,7 @@ class ResponseService:
                 chain_used = "simple"
                 logging.info("Used simple QA chain")
             
-            response_text = qa_response.get('text', 'Sorry, an answer could not be generated.')
+            response_text = qa_response.content if hasattr(qa_response, 'content') else str(qa_response)
             
             # Create enhanced two-tier structured response
             if is_focused:

@@ -1,4 +1,4 @@
-from langchain.prompts.prompt import PromptTemplate
+from langchain_core.prompts import PromptTemplate
 
 # ==============================================================================
 # FIXED Cypher Generation Templates - Return ALL organization data

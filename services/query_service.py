@@ -1,7 +1,6 @@
 import re
 import logging
 import time
-from langchain.chains import LLMChain
 from langchain_groq import ChatGroq
 from langchain.callbacks import get_openai_callback
 from config import Config
@@ -9,8 +8,6 @@ from models.spatial_intelligence import SpatialIntelligence
 from models.conversation_memory import ConversationMemory
 from database.neo4j_client import Neo4jClient
 from templates.prompts import PromptTemplateFactory
-
-# REMOVED: SimpleRateLimiter class entirely
 
 class QueryService:
     """
@@ -44,8 +41,8 @@ class QueryService:
         self.regular_cypher_prompt = PromptTemplateFactory.create_regular_cypher_prompt()
         
         # Initialize LLM chains
-        self.spatial_cypher_chain = LLMChain(llm=self.llm, prompt=self.spatial_cypher_prompt)
-        self.regular_cypher_chain = LLMChain(llm=self.llm, prompt=self.regular_cypher_prompt)
+        self.spatial_cypher_chain = self.spatial_cypher_prompt | self.llm
+        self.regular_cypher_chain = self.regular_cypher_prompt | self.llm
 
         # REMOVED: Rate limiter initialization
 
