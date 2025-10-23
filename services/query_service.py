@@ -549,7 +549,11 @@ SPATIAL QUERY INSTRUCTIONS:
             # Calculate token generation metrics
             generation_time = llm_duration - (first_token_time or 0)
             
-            cypher_query = cypher_response.get('text', '')
+            # Handle both AIMessage objects and dictionaries
+            if hasattr(cypher_response, 'content'):
+                cypher_query = cypher_response.content
+            else:
+                cypher_query = cypher_response.get('text', '')
 
             # IMPORTANT: Clean the LLM response to remove explanatory text
             cypher_query = self._clean_cypher_response(cypher_query)
@@ -702,7 +706,11 @@ SPATIAL QUERY INSTRUCTIONS:
             if self.metrics:
                 self.metrics.end_llm_timing()
             
-            expanded_cypher_query = cypher_response.get('text', '')
+            # Handle both AIMessage objects and dictionaries
+            if hasattr(cypher_response, 'content'):
+                expanded_cypher_query = cypher_response.content
+            else:
+                expanded_cypher_query = cypher_response.get('text', '')
             expanded_cypher_query = self._clean_cypher_response(expanded_cypher_query)
             logging.info(f"Generated expanded Cypher Query:\n\n{expanded_cypher_query}")
             
@@ -851,7 +859,11 @@ SPATIAL QUERY INSTRUCTIONS:
             if self.metrics:
                 self.metrics.end_llm_timing()
             
-            closest_cypher_query = cypher_response.get('text', '')
+            # Handle both AIMessage objects and dictionaries
+            if hasattr(cypher_response, 'content'):
+                closest_cypher_query = cypher_response.content
+            else:
+                closest_cypher_query = cypher_response.get('text', '')
             closest_cypher_query = self._clean_cypher_response(closest_cypher_query)
             
             # Ensure the query has LIMIT 5 to get only the closest
@@ -1125,22 +1137,22 @@ SPATIAL QUERY INSTRUCTIONS:
     - SUPPORT: case management, counseling, financial assistance
 
     CRITICAL SEMANTIC UNDERSTANDING RULES:
-    1. **"meal" or "meals"** → Food Bank (PRIMARY: food assistance)
-    2. **"food" or "dining"** → Food Bank (PRIMARY: food services)
-    3. **"printer" or "printing"** → Library (PRIMARY: technology services)
-    4. **"wi-fi" or "wifi" or "internet"** → Library (PRIMARY: technology access)
-    5. **"computer"** → Library (PRIMARY: technology access)
-    6. **"counseling"** → If mental health specific → Mental Health, otherwise → Food Bank (general support)
-    7. **"shelter" or "housing"** → If emergency/crisis → Temporary Shelter, if support/navigation → Food Bank
-    8. **"therapy" or "psychiatric"** → Mental Health (PRIMARY: clinical treatment)
-    9. **"benefits" or "retirement"** → Social Security Office (PRIMARY: government benefits)
-    10. **"appeal"** → Social Security Office (PRIMARY: decision appeals)
+    1. **"meal" or "meals"** â†’ Food Bank (PRIMARY: food assistance)
+    2. **"food" or "dining"** â†’ Food Bank (PRIMARY: food services)
+    3. **"printer" or "printing"** â†’ Library (PRIMARY: technology services)
+    4. **"wi-fi" or "wifi" or "internet"** â†’ Library (PRIMARY: technology access)
+    5. **"computer"** â†’ Library (PRIMARY: technology access)
+    6. **"counseling"** â†’ If mental health specific â†’ Mental Health, otherwise â†’ Food Bank (general support)
+    7. **"shelter" or "housing"** â†’ If emergency/crisis â†’ Temporary Shelter, if support/navigation â†’ Food Bank
+    8. **"therapy" or "psychiatric"** â†’ Mental Health (PRIMARY: clinical treatment)
+    9. **"benefits" or "retirement"** â†’ Social Security Office (PRIMARY: government benefits)
+    10. **"appeal"** â†’ Social Security Office (PRIMARY: decision appeals)
 
     MATCHING STRATEGY:
     - Understand the SEMANTIC MEANING, not just exact word matching
-    - "meal" = "meals" = "food" = "dining" → All map to Food Bank
-    - "printer" = "printing" → Both map to Library  
-    - "computer" = "computers" → Both map to Library
+    - "meal" = "meals" = "food" = "dining" â†’ All map to Food Bank
+    - "printer" = "printing" â†’ Both map to Library  
+    - "computer" = "computers" â†’ Both map to Library
     - Consider the PRIMARY PURPOSE of the service when categorizing
     - If a service fits multiple categories, choose based on PRIMARY meaning in user's context
     - Only return categories that have at least one service
