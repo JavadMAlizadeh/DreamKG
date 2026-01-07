@@ -41,8 +41,18 @@ class ConversationMemory:
         organization_names = []
         if results:
             for result in results:
-                if isinstance(result, dict) and 'o.name' in result:
-                    organization_names.append(result['o.name'])
+                if not isinstance(result, dict):
+                    continue
+
+                org_name = (
+                    result.get('o.name') or
+                    result.get('name') or
+                    result.get('organizationName')
+                )
+
+                if org_name:
+                    organization_names.append(org_name)
+
         
         # Store interaction
         interaction = {
