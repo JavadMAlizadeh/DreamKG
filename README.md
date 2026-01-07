@@ -262,12 +262,6 @@ Suggested areas:
 
 ---
 
-## 📄 License
-
-This project is released under an open‑source license for research and social impact use.
-
----
-
 ## 📬 Contact
 
 For questions or collaboration, please contact the project maintainers.
