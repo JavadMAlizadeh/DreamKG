@@ -1809,7 +1809,7 @@ def display_log_download_button(app_instance):
     
     # Read log file content
     log_content = app_instance.read_log_file()
-    
+    '''
     # Create download button that spans the full width like chat input
     st.download_button(
         label="📥 Download Session Log",
@@ -1819,7 +1819,7 @@ def display_log_download_button(app_instance):
         use_container_width=True,
         help="Download the session log file with all processing details"
     )
-
+    '''
 # --- Main Interaction Logic ---
 if app:
     if prompt := st.chat_input("What are you looking for, where, and when?"):
