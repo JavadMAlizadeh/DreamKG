@@ -455,10 +455,8 @@ class OrganizationInfoApp:
             return "No previous results available. Please ask a new question."
         
         # Determine response type
-        is_spatial = self.query_service.has_spatial_memory()
-
         response_result = self.response_service.generate_followup_response(
-            user_query, cached_results, is_spatial=is_spatial
+            user_query, cached_results
         )
 
         
