@@ -261,6 +261,164 @@ class ConversationMemory:
         self.last_spatial_info = None
         logging.info("Memory cleared")
     
+    def is_simple_followup(self, query):
+        """
+        Check if this is a simple follow-up that can use cached results.
+        
+        Args:
+            query (str): Query to check
+            
+        Returns:
+            bool: True if simple follow-up
+        """
+        query_lower = query.lower()
+        
+        simple_followup_patterns = [
+            r'^(?:what are their|what about their|do they have|can I|tell me about their)',
+            r'^(?:which ones|any of them|how many)',
+            r'hours\?',
+            r'services\?',
+            r'address\?',
+            r'phone\?',
+            r'location\?'
+        ]
+        
+        return any(re.search(pattern, query_lower) for pattern in simple_followup_patterns)
+    
+    def is_focused_followup(self, query):
+        """
+        Check if this is a focused follow-up that should get a specific answer.
+        
+        Args:
+            query (str): Query to check
+            
+        Returns:
+            bool: True if focused follow-up
+        """
+        query_lower = query.lower()
+        
+        focused_patterns = [
+            # ------------------------------------------------------------
+            # 0) Generic "tell me about X (one org)" patterns
+            # ------------------------------------------------------------
+            r'^\s*(?:tell me about|details for|info for|information for)\b',
+
+            # ------------------------------------------------------------
+            # 1) OPEN/CLOSED STATUS (now/today/tomorrow/this morning/etc.)
+            # ------------------------------------------------------------
+            r'^\s*(?:is|are)\s+(?:it|they|this|that)\s+(?:open|closed)\b',
+            r'\b(?:open|closed)\s+(?:now|right now|today|tonight|tomorrow)\b',
+            r'\b(?:open|closed)\s+(?:this\s+)?(?:morning|afternoon|evening|night)\b',
+            r'\b(?:are|is)\s+(?:it|they)\s+open\s+(?:on|this)\s+'
+            r'(?:mon(?:day)?|tue(?:s(?:day)?)?|wed(?:nesday)?|thu(?:rs(?:day)?)?|fri(?:day)?|sat(?:urday)?|sun(?:day)?)\b',
+            r'\b(?:are|is)\s+(?:it|they)\s+open\s+(?:this\s+)?weekend\b',
+            r'\b(?:are|is)\s+(?:it|they)\s+open\s+(?:this\s+)?weekday\b',
+            # ------------------------------------------------------------
+            # 2) HOURS (very common follow-ups)
+            # ------------------------------------------------------------
+            r'\bhours?\b',
+            r'\bwhat\s+time\s+(?:do|does)\s+(?:it|they)\s+(?:open|close)\b',
+            r'\bwhen\s+(?:do|does)\s+(?:it|they)\s+(?:open|close)\b',
+            r'\b(?:opening|closing)\s+time\b',
+            r'\buntil\s+what\s+time\b',
+            r'\bwhat\s+time\s+are\s+(?:you|they)\s+open\b',
+            r'\bwhat\s+are\s+(?:their|the)\s+hours\s+(?:today|tomorrow)\b',
+            r'\b(?:today|tomorrow)\s+hours\b',
+            r'\bhours?\s+on\s+'
+            r'(?:mon(?:day)?|tue(?:s(?:day)?)?|wed(?:nesday)?|thu(?:rs(?:day)?)?|fri(?:day)?|sat(?:urday)?|sun(?:day)?)\b',
+            r'\b(?:monday|tuesday|wednesday|thursday|friday|saturday|sunday)\s*:\s*\d',  # users paste like "Wednesday: ?"
+
+            # ------------------------------------------------------------
+            # 3) PHONE / CONTACT
+            # ------------------------------------------------------------
+            r'\bphone\b',
+            r'\bphone\s+number\b',
+            r'\bcontact\b',
+            r'\bcall\b',
+            r'\bemail\b',
+            r'\bwebsite\b',
+            r'\bhow\s+do\s+i\s+reach\b',
+            r'\bwhat\s+is\s+(?:their|the)\s+(?:phone|number)\b',
+
+            # ------------------------------------------------------------
+            # 4) ADDRESS / LOCATION / DIRECTIONS / TRANSIT
+            # ------------------------------------------------------------
+            r'\baddress\b',
+            r'\blocation\b',
+            r'\bwhere\s+(?:is|are)\b',
+            r'\bhow\s+do\s+i\s+get\s+there\b',
+            r'\bdirections\b',
+            r'\bnearby\b',
+            r'\bclosest\b',
+            r'\bhow\s+far\b',
+            r'\bdistance\b',
+            r'\b(bus|subway|train|trolley|septa|route)\b',
+            r'\bparking\b',
+
+            # ------------------------------------------------------------
+            # 5) SERVICES AVAILABILITY (do they have X?)
+            #    Works for library + homeless services + social services
+            # ------------------------------------------------------------
+            r'^\s*(?:do|does)\s+(?:it|they|this|that)\s+(?:have|offer|provide)\b',
+            r'\bcan\s+i\s+(?:get|use|access)\b',
+            r'\bis\s+(?:there|it)\s+(?:free|available)\b',
+            r'\bdo\s+they\s+help\s+with\b',
+            r'\bwhat\s+(?:services|resources)\s+(?:do\s+they|are\s+available)\b',
+
+            # Specific high-frequency services/needs (broad coverage)
+            r'\b(?:wi-?fi|internet|computers?|printing|copying|scanning)\b',
+            r'\b(?:shelter|bed|housing|overnight|sleep)\b',
+            r'\b(?:food|meals?|pantry|breakfast|lunch|dinner)\b',
+            r'\b(?:showers?|hygiene|restroom|bathroom|toilet)\b',
+            r'\b(?:laundry|clothes|clothing)\b',
+            r'\b(?:case\s*management|social\s*worker|benefits|snap|medicaid|medicare|ssi|disability)\b',
+            r'\b(?:mental\s*health|counseling|therapy|psychiatric)\b',
+            r'\b(?:substance|addiction|recovery|detox|sober)\b',
+            r'\b(?:legal|lawyer|id|identification|birth\s*certificate)\b',
+            r'\b(?:job|employment|resume|workforce)\b',
+
+            # ------------------------------------------------------------
+            # 6) COST / FREE / PRICING
+            # ------------------------------------------------------------
+            r'\bhow\s+much\b',
+            r'\bprice\b',
+            r'\bcost\b',
+            r'\bfee\b',
+            r'\bfees\b',
+            r'\bfree\b',
+            r'\bpaid\b',
+
+            # ------------------------------------------------------------
+            # 7) ELIGIBILITY / REQUIREMENTS / DOCUMENTS
+            # ------------------------------------------------------------
+            r'\b(?:eligible|eligibility|qualify|qualification)\b',
+            r'\bdo\s+i\s+need\b',
+            r'\brequirements?\b',
+            r'\bid\b',
+            r'\bappointment\b',
+            r'\bwalk[-\s]*in\b',
+            r'\breferral\b',
+            r'\bintake\b',
+            r'\bapply\b',
+            r'\bregistration\b',
+
+            # ------------------------------------------------------------
+            # 8) SAFETY-NET FOLLOW-UPS: "Which one" / "the first one" / "top result"
+            #    These should still be treated as focused to avoid re-listing.
+            # ------------------------------------------------------------
+            r'\b(?:the\s+first\s+one|top\s+one|top\s+result|first\s+result)\b',
+            r'\b(?:#|number)\s*1\b',
+            r'\b(?:that\s+one|this\s+one)\b',
+
+            # ------------------------------------------------------------
+            # 9) OPTIONAL: If user explicitly mentions a known org name later
+            #    (Handled better outside regex, but this helps.)
+            # ------------------------------------------------------------
+            r'\b(?:library|shelter|clinic|center|office|pantry)\b.*\b(?:open|hours|phone|address|services)\b',
+        ]
+        
+        return any(re.search(pattern, query_lower) for pattern in focused_patterns)
+    
     def get_interaction_count(self):
         """
         Get the number of stored interactions.
