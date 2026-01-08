@@ -313,6 +313,7 @@ class ConversationMemory:
             r'(?:mon(?:day)?|tue(?:s(?:day)?)?|wed(?:nesday)?|thu(?:rs(?:day)?)?|fri(?:day)?|sat(?:urday)?|sun(?:day)?)\b',
             r'\b(?:are|is)\s+(?:it|they)\s+open\s+(?:this\s+)?weekend\b',
             r'\b(?:are|is)\s+(?:it|they)\s+open\s+(?:this\s+)?weekday\b',
+            r'\b(?:which|any|are|is|do|does)\s+(?:one|ones|any\s+of\s+them|they|it)?\s*(?:open|closed)\s*(?:now|today|tonight|tomorrow|this\s+(?:morning|afternoon|evening|week|weekend)|on\s+(?:mon(?:day)?|tue(?:s(?:day)?)?|wed(?:nesday)?|thu(?:rs(?:day)?)?|fri(?:day)?|sat(?:urday)?|sun(?:day)?))?\b',
 
             # ------------------------------------------------------------
             # 2) HOURS (very common follow-ups)
