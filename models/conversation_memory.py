@@ -64,9 +64,9 @@ class ConversationMemory:
         }
         
         self.conversation_history.append(interaction)
-        self.current_context = results
+        self.current_context = (results or [])[:5]
         self.last_query = query
-        self.last_organizations = organization_names
+        self.last_organizations = organization_names[:5]
         self.last_spatial_info = spatial_info
         
         # Maintain history size
