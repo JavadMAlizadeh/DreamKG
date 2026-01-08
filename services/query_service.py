@@ -1582,13 +1582,6 @@ SPATIAL QUERY INSTRUCTIONS:
         }
     
     # Keep all the other methods from the original class unchanged for backward compatibility
-    def is_simple_followup(self, query):
-        """Check if query is a simple follow-up that can use cached results."""
-        return self.memory.is_simple_followup(query)
-    
-    def is_focused_followup(self, query):
-        """Check if query is a focused follow-up requiring specific answer."""
-        return self.memory.is_focused_followup(query)
     
     def get_cached_results(self):
         """Get cached results from memory."""

@@ -8,7 +8,7 @@ import re
 from langchain_groq import ChatGroq
 from config import Config
 from templates.prompts import PromptTemplateFactory
-
+from datetime import datetime
 
 class ResponseService:
     """
@@ -23,18 +23,18 @@ class ResponseService:
         )
         
         # Initialize prompt templates
-        self.focused_qa_prompt = PromptTemplateFactory.create_focused_qa_prompt()
+        self.followup_qa_prompt = PromptTemplateFactory.create_followup_qa_prompt()
         self.spatial_qa_prompt = PromptTemplateFactory.create_spatial_qa_prompt()
         self.simple_qa_prompt = PromptTemplateFactory.create_simple_qa_prompt()
-        
+
         # Initialize LLM chains
-        self.focused_qa_chain = self.focused_qa_prompt | self.llm
+        self.followup_qa_chain = self.followup_qa_prompt | self.llm
         self.spatial_qa_chain = self.spatial_qa_prompt | self.llm
         self.simple_qa_chain = self.simple_qa_prompt | self.llm
         
         logging.info("ResponseService initialized with two-tier display support")
     
-    def generate_response(self, query, results, is_spatial=False, is_focused=False):
+    def generate_response(self, query, results, is_spatial=False):
         """
         Generate response with enhanced two-tier structure.
         
@@ -42,7 +42,6 @@ class ResponseService:
             query (str): Original user query
             results (list): Database query results
             is_spatial (bool): Whether this was a spatial query
-            is_focused (bool): Whether this requires focused response
             
         Returns:
             dict: Response with two-tier structure
@@ -54,15 +53,6 @@ class ResponseService:
                     'response': "No results found for your query.",
                     'chain_used': 'none'
                 }
-            
-            # Generate response using appropriate chain
-            if is_focused:
-                qa_response = self.focused_qa_chain.invoke({
-                    "context": results,
-                    "question": query
-                })
-                chain_used = "focused"
-                logging.info("Used focused QA chain")
                 
             elif is_spatial:
                 qa_response = self.spatial_qa_chain.invoke({
@@ -83,13 +73,8 @@ class ResponseService:
             response_text = qa_response.content if hasattr(qa_response, 'content') else str(qa_response)
             
             # Create enhanced two-tier structured response
-            if is_focused:
-                formatted_response = response_text
-            else:
-                formatted_response = self._create_two_tier_response(
-                    response_text, results, is_spatial, query  # PASS query
-                )
-            
+            formatted_response = self._create_two_tier_response(response_text, results, is_spatial, query)
+
             logging.info(f"Enhanced two-tier response generated using {chain_used} chain")
             
             return {
@@ -363,15 +348,15 @@ class ResponseService:
     # Keep all other methods from original ResponseService...
     def generate_focused_response(self, query, results):
         """Generate focused response for specific follow-up questions."""
-        return self.generate_response(query, results, is_spatial=False, is_focused=True)
+        return self.generate_response(query, results, is_spatial=False)
     
     def generate_spatial_response(self, query, results):
         """Generate spatial response including distance information."""
-        return self.generate_response(query, results, is_spatial=True, is_focused=False)
+        return self.generate_response(query, results, is_spatial=True)
     
     def generate_simple_response(self, query, results):
         """Generate simple response with full organization details."""
-        return self.generate_response(query, results, is_spatial=False, is_focused=False)
+        return self.generate_response(query, results, is_spatial=False)
 
 
     # ===== ENHANCED DISPLAY FUNCTION FOR TWO-TIER =====
@@ -476,22 +461,58 @@ class ResponseService:
             suggestions = []
             
             if used_memory:
-                suggestions.append("💭 Memory: This answer is based on your previous query. Ask a new question to search again.")
+                suggestions.append("Memory: This answer is based on your previous query. Ask a new question to search again.")
             
             elif is_spatial:
                 if expanded_radius and original_threshold and expanded_threshold:
-                    suggestions.append(f"🔍 No organizations found within {original_threshold} miles. Expanded search to {expanded_threshold} miles...")
+                    suggestions.append(f"No organizations found within {original_threshold} miles. Expanded search to {expanded_threshold} miles...")
                 
                 if result_count > 3:
-                    suggestions.append(f"💡 Tip: Found {result_count} organizations. Try asking focused follow-up questions like 'What are their paid services?' or 'Do they have Wi-Fi?'")
+                    suggestions.append(f"Tip: Found {result_count} organizations. Try asking focused follow-up questions like 'What are their paid services?' or 'Do they have Wi-Fi?'")
                 elif result_count == 0:
                     threshold = expanded_threshold or original_threshold or "the specified distance"
-                    suggestions.append(f"💡 Tip: No organizations found within {threshold} miles. Try expanding your search radius or check a different area.")
+                    suggestions.append(f"Tip: No organizations found within {threshold} miles. Try expanding your search radius or check a different area.")
             
             else:
                 if result_count > 1:
-                    suggestions.append(f"💡 Tip: Found {result_count} organizations. Ask focused follow-up questions like 'What are their paid services?' or 'What are their hours on Monday?'")
+                    suggestions.append(f"Tip: Found {result_count} organizations. Ask focused follow-up questions like 'What are their paid services?' or 'What are their hours on Monday?'")
             
             return "\n".join(suggestions) if suggestions else ""
     
+    def generate_followup_response(self, query, cached_results):
+        """Answer follow-up questions using ONLY cached results."""
+        try:
+            if not cached_results:
+                return {
+                    "success": True,
+                    "response": "I don’t have previous results to reuse. Please ask the full question again.",
+                    "chain_used": "followup"
+                }
+
+            today_weekday = datetime.now().strftime("%A")  # e.g., "Wednesday"
+
+            qa_response = self.followup_qa_chain.invoke({
+                "context": cached_results,
+                "question": query,
+                "today_weekday": today_weekday
+            })
+
+            response_text = qa_response.content if hasattr(qa_response, "content") else str(qa_response)
+
+            return {
+                "success": True,
+                "response": response_text,
+                "chain_used": "followup"
+            }
+
+        except Exception as e:
+            logging.error(f"Follow-up response generation failed: {str(e)}")
+            return {
+                "success": False,
+                "error": str(e),
+                "response": "Sorry, there was an error answering the follow-up.",
+                "chain_used": "followup"
+            }
+
+        
     

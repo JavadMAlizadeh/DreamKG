@@ -686,25 +686,30 @@ Question: {question}
 # QA Templates (unchanged but included for completeness)
 # ==============================================================================
 
-FOCUSED_QA_TEMPLATE = """Use the following context to answer the question with a FOCUSED response. Only provide the specific information requested.
+FOLLOWUP_QA_TEMPLATE = """Use the following cached context (results from the previous search) to answer the user's FOLLOW-UP question.
+You MUST use ONLY the context. Do NOT add new information. Do NOT run a new search.
 
 Context: {context}
 Question: {question}
+TodayWeekday: {today_weekday}
 
-FOCUSED RESPONSE RULES:
-1. Answer ONLY the specific question asked - do not include full organization details
-2. If asking about specific services (e.g., "paid services"), list only those services
-3. If asking about hours for a specific day, show only that day's hours
-4. If asking about contact info, show only contact details
-5. Keep responses concise and direct
-6. Use simple bullet points (*) only when listing multiple items
+FOLLOW-UP RESPONSE RULES:
+1) Do NOT run a new search. Use ONLY the context.
+2) Answer ONLY the specific question asked - do not include full organization details.
+3) If the user does NOT specify an organization, assume the TOP/first organization in the context.
+4) If the user asks "which one/which ones/any of them", answer by filtering the organizations in the context.
+5) If the user asks "today", use TodayWeekday and show ONLY that day's hours (not the full weekly schedule).
+6) If asking about services, list ONLY the relevant services (free vs paid if requested).
+7) If asking about contact/location, show ONLY phone/address.
+8) If the context does not contain the answer, say: "Not available in the retrieved data."
 
 EXAMPLES:
-- Question: "what are their paid services?" → Answer: "The Philadelphia City Institute offers these paid services: Printing and Copying."
-- Question: "what are their hours on Monday?" → Answer: "The Philadelphia City Institute is open Monday from 10:00 AM - 6:00 PM."
-- Question: "do they have WiFi?" → Answer: "Yes, the Philadelphia City Institute offers free Wi-Fi."
+- Question: "what are their paid services?" → Answer: "Paid services: Printing, Copying."
+- Question: "what are their hours today?" → Answer: "{today_weekday}: 10:00 AM - 5:00 PM."
+- Question: "which one is open today?" → Answer: "Open today ({today_weekday}): Org A, Org B."
+- Question: "do they have Wi-Fi?" → Answer: "Yes—free Wi-Fi."
 
-Answer focusing only on what was asked:"""
+Answer:"""
 
 SPATIAL_QA_TEMPLATE = """Use the following context to answer the question. Include ALL details from the context in your answer.
 
@@ -818,14 +823,6 @@ class PromptTemplateFactory:
         )
     
     @staticmethod
-    def create_focused_qa_prompt():
-        """Create focused QA prompt template."""
-        return PromptTemplate(
-            input_variables=["context", "question"],
-            template=FOCUSED_QA_TEMPLATE
-        )
-    
-    @staticmethod
     def create_spatial_qa_prompt():
         """Create spatial QA prompt template."""
         return PromptTemplate(
@@ -840,11 +837,18 @@ class PromptTemplateFactory:
             input_variables=["context", "question"],
             template=SIMPLE_QA_TEMPLATE
         )
+    
+    @staticmethod
+    def create_followup_qa_prompt():
+        """Create follow-up QA prompt template."""
+        return PromptTemplate(
+            input_variables=["context", "question", "today_weekday"],
+            template=FOLLOWUP_QA_TEMPLATE
+        )
 
 
 # Pre-created prompt instances for backward compatibility
 SPATIAL_CYPHER_GENERATION_PROMPT = PromptTemplateFactory.create_spatial_cypher_prompt()
 CYPHER_GENERATION_PROMPT = PromptTemplateFactory.create_regular_cypher_prompt()
-FOCUSED_QA_PROMPT = PromptTemplateFactory.create_focused_qa_prompt()
 SPATIAL_QA_PROMPT = PromptTemplateFactory.create_spatial_qa_prompt()
 SIMPLE_QA_PROMPT = PromptTemplateFactory.create_simple_qa_prompt()

@@ -1,10 +1,5 @@
-# 1.Removed log download button temporarily for testing:
-# Download button - outside all conditional blocks
-# if app and st.session_state.messages:
-#   display_log_download_button(app)
-# 2. In conversation_memory.py:
-# Updated organization_names = []
-# Made focused_patterns = [] complete
+# 1. In conversation_memory.py:
+# Updated followup system from parsing to LLM.
 
 import streamlit as st
 import streamlit.components.v1 as components
@@ -236,8 +231,7 @@ class OrganizationInfoApp:
                     return f"Error generating metrics: {str(e)}"
             
             # Check if this is a simple follow-up that can use cached results
-            if (self.query_service.is_simple_followup(user_query) and 
-                self.memory.should_use_memory(user_query)):
+            if self.memory.should_use_memory(user_query):
                 
                 logging.info("Detected simple follow-up query - using cached results")
                 return self._handle_cached_query_with_enhanced_metrics(user_query)
@@ -252,9 +246,10 @@ class OrganizationInfoApp:
             # Record memory usage with timing
             self.metrics.record_memory_usage(
                 used_memory=query_result.get('used_memory', False),
-                is_focused=self.query_service.is_focused_followup(user_query),
+                is_focused=False,
                 duration=query_result.get('memory_duration')
             )
+
             
             # Record processing time breakdowns
             if query_result.get('neo4j_duration'):
@@ -342,8 +337,7 @@ class OrganizationInfoApp:
                     return f"Error generating metrics: {str(e)}"
             
             # Check if this is a simple follow-up that can use cached results
-            if (self.query_service.is_simple_followup(user_query) and 
-                self.memory.should_use_memory(user_query)):
+            if self.memory.should_use_memory(user_query):
                 
                 logging.info("Detected simple follow-up query - using cached results")
                 return self._handle_cached_query_with_enhanced_metrics(user_query)
@@ -370,9 +364,10 @@ class OrganizationInfoApp:
             # Record memory usage with timing
             self.metrics.record_memory_usage(
                 used_memory=query_result.get('used_memory', False),
-                is_focused=self.query_service.is_focused_followup(user_query),
+                is_focused=False,
                 duration=query_result.get('memory_duration')
             )
+
             
             # Record processing time breakdowns
             if query_result.get('neo4j_duration'):
@@ -440,17 +435,16 @@ class OrganizationInfoApp:
         if cached_results:
             cached_results = cached_results[:10]
         
-        # Record memory usage with timing
-        import time
+        # Record memory usage with timing (no focused system anymore)
         memory_start_time = time.time()
-        is_focused = self.query_service.is_focused_followup(user_query)
         memory_duration = time.time() - memory_start_time
-        
+
         self.metrics.record_memory_usage(
             used_memory=True,
-            is_focused=is_focused,
+            is_focused=False,
             duration=memory_duration
         )
+
         
         if not cached_results:
             self.metrics.record_query_result(
@@ -462,10 +456,11 @@ class OrganizationInfoApp:
         
         # Determine response type
         is_spatial = self.query_service.has_spatial_memory()
-        
-        response_result = self.response_service.generate_response(
-            user_query, cached_results, is_spatial=is_spatial, is_focused=is_focused
+
+        response_result = self.response_service.generate_followup_response(
+            user_query, cached_results, is_spatial=is_spatial
         )
+
         
         if response_result['success']:
             self.metrics.record_query_result(
@@ -497,15 +492,10 @@ class OrganizationInfoApp:
         is_spatial = query_result['is_spatial']
         used_memory = query_result['used_memory']
         
-        # For follow-up queries using memory, check if focused response needed
-        if used_memory:
-            is_focused = self.query_service.is_focused_followup(user_query)
-        else:
-            is_focused = False
-        
         return self.response_service.generate_response(
-            user_query, results, is_spatial=is_spatial, is_focused=is_focused
+            user_query, results, is_spatial=is_spatial
         )
+
     
     def _handle_query_error(self, query_result):
         """Handle errors in query processing with enhanced error reporting."""
@@ -2014,8 +2004,7 @@ if app:
                         response_result = app.response_service.generate_response(
                             prompt,  # Use original user query
                             query_result['results'],
-                            is_spatial=True,
-                            is_focused=False
+                            is_spatial=True
                         )
                         
                         response = response_result['response']
