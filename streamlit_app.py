@@ -1,4 +1,10 @@
-# Deployment.
+# 1.Removed log download button temporarily for testing:
+# Download button - outside all conditional blocks
+# if app and st.session_state.messages:
+#   display_log_download_button(app)
+# 2. In conversation_memory.py:
+# Updated organization_names = []
+# Made focused_patterns = [] complete
 
 import streamlit as st
 import streamlit.components.v1 as components
