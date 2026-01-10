@@ -1,10 +1,4 @@
-# 1.Removed log download button temporarily for testing:
-# Download button - outside all conditional blocks
-# if app and st.session_state.messages:
-#   display_log_download_button(app)
-# 2. In conversation_memory.py:
-# Updated organization_names = []
-# Made focused_patterns = [] complete
+# Deployment.
 
 import streamlit as st
 import streamlit.components.v1 as components
@@ -1815,7 +1809,7 @@ def display_log_download_button(app_instance):
     
     # Read log file content
     log_content = app_instance.read_log_file()
-
+    
     # Create download button that spans the full width like chat input
     st.download_button(
         label="📥 Download Session Log",
@@ -2094,8 +2088,8 @@ else:
     st.warning("Application is not available due to an initialization error.")
 
 # Download button - outside all conditional blocks
-#if app and st.session_state.messages:
-#   display_log_download_button(app)
+if app and st.session_state.messages:
+    display_log_download_button(app)
 
 def main():
     """Main entry point for the Streamlit application."""
