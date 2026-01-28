@@ -48,6 +48,24 @@ class ResponseService:
             dict: Response with two-tier structure
         """
         try:
+            # Normalize and filter out placeholder / empty rows
+            results = results or []
+            filtered_results = []
+
+            for r in results:
+                if not isinstance(r, dict):
+                    continue
+
+                name = (r.get('o.name') or r.get('name') or r.get('organizationName') or '').strip()
+
+                # Treat placeholder rows as not-a-result
+                if not name or name.lower() == 'unknown organization':
+                    continue
+
+                filtered_results.append(r)
+
+            results = filtered_results
+
             if not results:
                 return {
                     'success': True,
@@ -293,8 +311,8 @@ class ResponseService:
             # Build address
             address_parts = []
             street = (result.get('l.street') or result.get('street') or result.get('streetAddress'))
-            city = (result.get('l.city') or result.get('city') or 'Philadelphia')
-            state = (result.get('l.state') or result.get('state') or 'PA')
+            city = (result.get('l.city') or result.get('city'))
+            state = (result.get('l.state') or result.get('state'))
             zipcode = (result.get('l.zipcode') or result.get('zipcode') or result.get('zipCode'))
             
             if street:
