@@ -503,22 +503,16 @@ class OrganizationInfoApp:
     
     def _handle_query_error(self, query_result):
         """Handle errors in query processing with enhanced error reporting."""
-        error_message = query_result.get('error', 'Unknown error')
-        
-        if 'geocode' in error_message.lower():
-            error_response = self.response_service.format_error_response(
-                'geocoding', error_message
-            )
-        elif 'no results' in error_message.lower():
-            error_response = self.response_service.format_error_response(
-                'no_results', error_message
-            )
-        else:
-            error_response = self.response_service.format_error_response(
-                'query', error_message
-            )
-        
-        return error_response['response']
+        error_message = (query_result.get('error') or 'Unknown error').strip()
+        msg_lower = error_message.lower()
+
+        if 'no results' in msg_lower:
+            return "No results found for your query."
+
+        if 'geocode' in msg_lower or 'could not geocode' in msg_lower:
+            return "I couldn't understand the location in your query. Please try a clearer place name or ZIP code."
+
+        return f"Sorry, there was an error processing your query: {error_message}"
     
     def _handle_response_error(self, response_result):
         """Handle errors in response generation."""

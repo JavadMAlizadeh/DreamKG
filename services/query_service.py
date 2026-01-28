@@ -1342,13 +1342,28 @@ SPATIAL QUERY INSTRUCTIONS:
             
             if is_spatial_query:
                 spatial_result = self._process_spatial_query(processed_query)
+
                 if not spatial_result['success']:
-                    return spatial_result
-                
-                spatial_context = spatial_result['spatial_context']
-                spatial_info = spatial_result['spatial_info']
-                user_coordinates = spatial_result['user_coordinates']
-                distance_threshold = spatial_result['distance_threshold']
+                    # If spatial keywords were detected but we couldn't extract a usable location,
+                    # treat it as NON-spatial and continue so the user gets "No results found..."
+                    err = (spatial_result.get('error') or '').lower()
+                    if 'no location extracted' in err:
+                        logging.info(
+                            "Spatial keywords detected but no location extracted; falling back to non-spatial flow"
+                        )
+                        is_spatial_query = False
+                        spatial_context = ""
+                        spatial_info = None
+                        user_coordinates = None
+                        distance_threshold = None
+                    else:
+                        return spatial_result
+
+                if is_spatial_query and spatial_result.get('success'):
+                    spatial_context = spatial_result['spatial_context']
+                    spatial_info = spatial_result['spatial_info']
+                    user_coordinates = spatial_result['user_coordinates']
+                    distance_threshold = spatial_result['distance_threshold']
             
             # Step 5: Enhance contexts with service intelligence
             if service_keywords or primary_service:
