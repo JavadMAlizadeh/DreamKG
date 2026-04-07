@@ -607,7 +607,7 @@ class OrganizationInfoApp:
         
 # --- Page Configuration ---
 st.set_page_config(
-    page_title="DREAM KG",
+    page_title="DreamKG",
     page_icon="logo.png",
     layout="centered",
 )
@@ -1044,13 +1044,13 @@ if img:
     st.markdown(f"""
         <div style="display: flex; align-items: center; gap: 15px; margin-bottom: 20px;">
             <img src="data:image/png;base64,{img}" width="50">
-            <h1 style="margin: 0;">DREAM KG</h1>
+            <h1 style="margin: 0;">DreamKG</h1>
         </div>
         """,
         unsafe_allow_html=True
     )
 else:
-    st.title("DREAM KG")
+    st.title("DreamKG")
 
 st.markdown("---")
 
