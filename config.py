@@ -14,13 +14,14 @@ os.environ["NEO4J_USERNAME"] = st.secrets["NEO4J_USERNAME"]
 os.environ["NEO4J_PASSWORD"] = st.secrets["NEO4J_PASSWORD"]
 os.environ["GROQ_API_KEY"] = st.secrets["GROQ_API_KEY"]
 
+
 class Config:
     """Configuration class containing all application settings."""
 
     NEO4J_URI = os.getenv("NEO4J_URI")
     NEO4J_USERNAME = os.getenv("NEO4J_USERNAME")
     NEO4J_PASSWORD = os.getenv("NEO4J_PASSWORD")
-    
+
     # LLM Configuration
     GROQ_API_KEY = os.getenv("GROQ_API_KEY")
     LLM_MODEL = "openai/gpt-oss-120b"
@@ -29,16 +30,16 @@ class Config:
     # Google Sheets Configuration
     GOOGLE_CREDENTIALS = dict(st.secrets["google_credentials"])
     GOOGLE_SHEET_NAME = "DreamKGLogs"
-    GOOGLE_WORKSHEET_NAME = "Session_Logs" 
-    
+    GOOGLE_WORKSHEET_NAME = "Session_Logs"
+
     # Memory Configuration
     MAX_CONVERSATION_HISTORY = 5
-    
+
     # Spatial Intelligence Configuration
     GEOCODING_TIMEOUT = 10
-    DEFAULT_DISTANCE_THRESHOLD =  0.8 # miles
+    DEFAULT_DISTANCE_THRESHOLD = 0.8  # miles
     EXPANDED_DISTANCE_THRESHOLD = 1.1  # miles
-    
+
     # Proximity thresholds in miles
     PROXIMITY_THRESHOLDS = {
         'nearby': 0.8,
@@ -49,80 +50,133 @@ class Config:
         'vicinity': 1,
         'area': 2.0
     }
-    
-    # Philadelphia-specific landmarks and neighborhoods
-    PHILLY_LANDMARKS = {
-        'city hall': '39.952335, -75.163789',
-        'liberty bell': '39.9496, -75.1503',
-        'independence hall': '39.9487, -75.1503',
-        'temple university': '39.9812, -75.1556',
-        'university of pennsylvania': '39.9522, -75.1932',
-        'drexel university': '39.9566, -75.1899',
-        'center city': '39.9526, -75.1652',
-        'south philly': '39.9184, -75.1718',
-        'north philly': '40.0059, -75.1380',
-        'west philly': '39.9612, -75.2397',
-        'rittenhouse square': '39.9486, -75.1723',
-        'fishtown': '39.9759, -75.1370',
-        'northern liberties': '39.9670, -75.1410'
+
+    # -------------------------------------------------------------------------
+    # Multi-city configuration
+    # -------------------------------------------------------------------------
+    SUPPORTED_CITIES = ["Philadelphia", "Los Angeles"]
+
+    CITY_CONFIGS = {
+        "Philadelphia": {
+            "default_coords": (39.952335, -75.163789),  # City Hall
+            "state": "PA",
+            "geocode_suffix": "Philadelphia, PA",
+            "address_placeholder": "e.g., 1234 Market Street, Philadelphia",
+            "zip_pattern": r'\b19\d{3}\b',
+            "landmarks": {
+                'city hall': '39.952335, -75.163789',
+                'liberty bell': '39.9496, -75.1503',
+                'independence hall': '39.9487, -75.1503',
+                'temple university': '39.9812, -75.1556',
+                'university of pennsylvania': '39.9522, -75.1932',
+                'drexel university': '39.9566, -75.1899',
+                'center city': '39.9526, -75.1652',
+                'south philly': '39.9184, -75.1718',
+                'north philly': '40.0059, -75.1380',
+                'west philly': '39.9612, -75.2397',
+                'rittenhouse square': '39.9486, -75.1723',
+                'fishtown': '39.9759, -75.1370',
+                'northern liberties': '39.9670, -75.1410',
+            },
+        },
+        "Los Angeles": {
+            "default_coords": (34.0537, -118.2427),  # LA City Hall
+            "state": "CA",
+            "geocode_suffix": "Los Angeles, CA",
+            "address_placeholder": "e.g., 200 N Spring St, Los Angeles",
+            "zip_pattern": r'\b9[0-1]\d{3}\b',
+            "landmarks": {
+                'city hall': '34.0537, -118.2427',
+                'downtown la': '34.0407, -118.2468',
+                'hollywood': '34.0928, -118.3287',
+                'santa monica': '34.0195, -118.4912',
+                'venice beach': '33.9850, -118.4695',
+                'koreatown': '34.0583, -118.3006',
+                'echo park': '34.0780, -118.2601',
+                'silver lake': '34.0867, -118.2718',
+                'los feliz': '34.1072, -118.2909',
+                'westwood': '34.0624, -118.4454',
+                'ucla': '34.0689, -118.4452',
+                'usc': '34.0224, -118.2851',
+                'inglewood': '33.9617, -118.3531',
+                'compton': '33.8958, -118.2201',
+                'east la': '34.0239, -118.1717',
+                'boyle heights': '34.0336, -118.1995',
+                'culver city': '34.0211, -118.3964',
+                'long beach': '33.7701, -118.1937',
+                'pasadena': '34.1478, -118.1445',
+                'burbank': '34.1808, -118.3090',
+                'glendale': '34.1425, -118.2551',
+                'van nuys': '34.1897, -118.4499',
+                'north hollywood': '34.1870, -118.3818',
+                'studio city': '34.1397, -118.3962',
+                'the valley': '34.1997, -118.5300',
+                'skid row': '34.0440, -118.2468',
+                'little tokyo': '34.0499, -118.2393',
+                'chinatown': '34.0637, -118.2381',
+                'macarthur park': '34.0578, -118.2788',
+            },
+        },
     }
-    
+
+    # Keep PHILLY_LANDMARKS as a convenience alias (used by SpatialIntelligence)
+    PHILLY_LANDMARKS = CITY_CONFIGS["Philadelphia"]["landmarks"]
+
     # Spatial keywords that trigger geocoding
     SPATIAL_KEYWORDS = [
-        'near', 'close', 'nearby', 'around', 'within', 'distance', 
+        'near', 'close', 'nearby', 'around', 'within', 'distance',
         'closest', 'nearest', 'walking', 'driving', 'miles', 'km',
         'blocks', 'vicinity', 'area', 'location', 'from', 'to'
     ]
-    
-    
+
     @staticmethod
     def setup_logging_with_session_id(session_id):
         """Setup logging with guaranteed unique filename per session."""
         import uuid
         from datetime import datetime
-        
+
         # Logging Configuration
         LOG_DIRECTORY = "./logs/"
-        
+
         # Create directory if it doesn't exist
         os.makedirs(LOG_DIRECTORY, exist_ok=True)
-        
+
         # Use session ID + timestamp + random component for absolute uniqueness
         timestamp = datetime.now().strftime("%Y-%m-%d_%H-%M-%S-%f")[:-3]
         random_component = str(uuid.uuid4())[:8]
         log_filename = os.path.join(LOG_DIRECTORY, f"{timestamp}_{session_id[:8]}_{random_component}_app.log")
-        
+
         # Create a unique logger for this session
         logger_name = f"app_logger_{session_id}"
         logger = logging.getLogger(logger_name)
-        
+
         # Clear any existing handlers to avoid duplicates
         logger.handlers.clear()
         logger.setLevel(logging.INFO)
-        
+
         # Create file handler for this session
         file_handler = logging.FileHandler(log_filename)
         file_handler.setLevel(logging.INFO)
         formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
         file_handler.setFormatter(formatter)
-        
+
         logger.addHandler(file_handler)
-        
+
         # Set this as the root logger for this session
         logging.root.handlers = [file_handler]
         logging.root.setLevel(logging.INFO)
-        
+
         return log_filename
-    
+
     # Category order for multi-category queries
     CATEGORY_ORDER = [
         "Food Bank",
-        "Library", 
+        "Library",
         "Social Security Office",
         "Mental Health",
         "Temporary Shelter"
     ]
-    
+
     # Service to Category mapping for short answers
     CATEGORY_SERVICES = {
         "Food Bank": [
@@ -187,7 +241,7 @@ class Config:
             "understand mental health",
             "virtual support"
         ],
-        
+
         "Library": [
             "accessibility",
             "adult basic literacy",
@@ -361,7 +415,7 @@ class Config:
             "workshops",
             "youth programs"
         ],
-        
+
         "Mental Health": [
             "12-step",
             "addiction",
@@ -417,7 +471,7 @@ class Config:
             "understand mental health",
             "virtual support"
         ],
-        
+
         "Social Security Office": [
             "1099",
             "address",
@@ -488,7 +542,7 @@ class Config:
             "updating",
             "withdrawal"
         ],
-        
+
         "Temporary Shelter": [
             "stay",
             "addiction & recovery",
@@ -551,6 +605,11 @@ class Config:
     }
 
     @classmethod
+    def get_city_config(cls, city: str = "Philadelphia") -> dict:
+        """Return the configuration dict for the given city name."""
+        return cls.CITY_CONFIGS.get(city, cls.CITY_CONFIGS["Philadelphia"])
+
+    @classmethod
     def validate_config(cls):
         """Validate that all required configuration is present."""
         required_vars = [
@@ -558,13 +617,13 @@ class Config:
             ('GROQ_API_KEY', cls.GROQ_API_KEY),
             ('GOOGLE_CREDENTIALS', cls.GOOGLE_CREDENTIALS)
         ]
-        
+
         missing_vars = []
         for var_name, var_value in required_vars:
             if not var_value:
                 missing_vars.append(var_name)
-        
+
         if missing_vars:
             raise ValueError(f"Missing required environment variables: {', '.join(missing_vars)}")
-        
+
         return True
