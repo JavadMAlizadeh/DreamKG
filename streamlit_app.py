@@ -1071,7 +1071,7 @@ st.markdown("""
 Welcome! Ask a question about **Food Banks**, **Mental Health Services**, **Shelters**, **Public Libraries**, and **Social Security offices** in **Philadelphia** or **Los Angeles**.
 
 **Examples:**
-* Is there a library in Koreatown with free Wi-Fi on Tuesdays?
+* Is there a food bank on Tuesdays near Hollywood?
 * Can you help me find a mental health service near Downtown LA?
 * Help me find some food, a library where I can print a document, and a place to stay in Philadelphia.
 
