@@ -41,7 +41,7 @@ STRING COMPARISON RULES:
 
 SERVICE MATCHING RULES:
 8. **Intelligent Service Matching**: Break user requests into essential keywords using the most common/singular form:
-   
+
    **Social Security Examples:**
    - 'handles appeals' → use 'appeal' (matches "Appeal a Decision")
    - 'retirement benefits' → use 'retirement' and 'benefit' (matches "Apply for Benefits")
@@ -52,12 +52,12 @@ SERVICE MATCHING RULES:
    - 'WiFi access' → use 'wi-fi' (matches "Wi-Fi", "Public Computers, Wi-Fi")
    - 'computer use' → use 'computer' (matches "Public Computers", "Computer Labs")
    - 'printing services' → use 'print' (matches "Printing, Copying, Scanning")
-   
+
    **Library Education Examples:**
    - 'ESL classes' → use 'esl' (matches "ESL & Spanish Literacy Classes", "ESL Services")
    - 'job help' → use 'job' (matches "Job Assistance", "Job Search Assistance", "Job Readiness Lab")
    - 'homework assistance' → use 'homework' (matches "Homework Help")
-   
+
    **Library Children Examples:**
    - 'story times' → use 'story' (matches "Story Times", "Story Time", "Toddler Story Time")
    - 'after school programs' → use 'after' AND 'school' (matches "After-school Programs")
@@ -82,7 +82,7 @@ SERVICE MATCHING RULES:
    Use AND only when keywords MUST appear TOGETHER in the same service name:
    - CORRECT: 'story' AND 'time' → matches "Story Time"
    - CORRECT: 'job' AND 'assistance' → matches "Job Assistance"
-   
+
 9.5. **Related Service Matching - WHEN TO USE OR**:
    Use OR when keywords represent ALTERNATIVE or RELATED services:
    - CORRECT: '1099' OR 'statement' OR 'benefit' → matches any benefits documentation
@@ -96,12 +96,12 @@ SERVICE MATCHING RULES:
     - Instead of 'classes' use 'class' (singular)
 
 11. **Common Service Patterns**: Use these proven patterns:
-   
+
     # Single keyword search:
     WHERE toLower(s.name) CONTAINS 'wifi'
     WHERE toLower(s.name) CONTAINS 'appeal'
     WHERE toLower(s.name) CONTAINS 'computer'
-    
+
     # Multi-keyword search:
     WHERE toLower(s.name) CONTAINS 'story' AND toLower(s.name) CONTAINS 'time'
     WHERE toLower(s.name) CONTAINS 'job' AND toLower(s.name) CONTAINS 'assistance'
@@ -112,12 +112,11 @@ SERVICE MATCHING RULES:
     - **Usually Paid**: Printing, copying, overnight delivery, ATM withdrawals, international transactions
 
 SPATIAL QUERY RULES - CRITICAL:
-13. **SPATIAL QUERIES DO NOT NEED LOCATION FILTERS**: When spatial context is provided with coordinates, the distance calculation handles all location filtering. DO NOT add any location-based WHERE conditions such as:
-    - Do NOT use: `toLower(l.city) CONTAINS 'philadelphia'`
-    - Do NOT use: `toLower(l.street) CONTAINS 'aramingo'`
-    - Do NOT use: `toLower(l.zipcode) = '19134'`
-    - Do NOT use: `toLower(l.state) = 'pa'`
-14. **Distance is the ONLY location filter needed**: The distance calculation with the threshold automatically filters by location.
+13. **CITY/STATE FILTER IS REQUIRED**: The spatial context will tell you which state code to filter on. ALWAYS add that state filter to prevent returning results from other cities/states. Example: WHERE toLower(l.state) = 'ca' for Los Angeles data, or WHERE toLower(l.state) = 'pa' for Philadelphia data.
+    - Do NOT filter by city name, street, or zipcode - the state filter plus distance handles location.
+    - CORRECT: WHERE distance_miles <= 0.8 AND toLower(l.state) = 'ca'
+    - WRONG: omitting the state filter entirely
+14. **Distance + State are the ONLY location filters needed**: Use distance_miles threshold for proximity and the state code for city scoping.
 15. Use Neo4j spatial functions: point(), point.distance().
 16. Sort results by distance when location is specified: ORDER BY distance ASC.
 17. Include distance in the result set for spatial queries.
@@ -142,7 +141,7 @@ MATCH vs OPTIONAL MATCH DECISION RULES - CRITICAL:
 21. **CRITICAL - Time Keyword Detection**: If the query contains ANY of these day keywords, you MUST use MATCH for time:
     - monday, tuesday, wednesday, thursday, friday, saturday, sunday
     - weekday, weekend, today, tomorrow
-    
+
 22. **TIME QUERY EXAMPLES**:
     - "libraries open on Tuesday" → MATCH (o)-[:HAS_HOURS]->(t:Time) WHERE t.tuesday <> 'Closed'
     - "library on West Lehigh that has wi-fi on Tuesday" → MATCH (o)-[:HAS_HOURS]->(t:Time) WHERE t.tuesday <> 'Closed'
@@ -405,7 +404,7 @@ STRING COMPARISON RULES:
 
 SERVICE MATCHING RULES:
 8. **Intelligent Service Matching**: Break user requests into essential keywords using the most common/singular form:
-   
+
    **Social Security Examples:**
    - 'handles appeals' → use 'appeal' (matches "Appeal a Decision")
    - 'retirement benefits' → use 'retirement' and 'benefit' (matches "Apply for Benefits")
@@ -416,12 +415,12 @@ SERVICE MATCHING RULES:
    - 'WiFi access' → use 'wi-fi' (matches "Wi-Fi", "Public Computers, Wi-Fi")
    - 'computer use' → use 'computer' (matches "Public Computers", "Computer Labs")
    - 'printing services' → use 'print' (matches "Printing, Copying, Scanning")
-   
+
    **Library Education Examples:**
    - 'ESL classes' → use 'esl' (matches "ESL & Spanish Literacy Classes", "ESL Services")
    - 'job help' → use 'job' (matches "Job Assistance", "Job Search Assistance", "Job Readiness Lab")
    - 'homework assistance' → use 'homework' (matches "Homework Help")
-   
+
    **Library Children Examples:**
    - 'story times' → use 'story' (matches "Story Times", "Story Time", "Toddler Story Time")
    - 'after school programs' → use 'after' AND 'school' (matches "After-school Programs")
@@ -446,7 +445,7 @@ SERVICE MATCHING RULES:
    Use AND only when keywords MUST appear TOGETHER in the same service name:
    - CORRECT: 'story' AND 'time' → matches "Story Time"
    - CORRECT: 'job' AND 'assistance' → matches "Job Assistance"
-   
+
 9.5. **Related Service Matching - WHEN TO USE OR**:
    Use OR when keywords represent ALTERNATIVE or RELATED services:
    - CORRECT: '1099' OR 'statement' OR 'benefit' → matches any benefits documentation
@@ -460,12 +459,12 @@ SERVICE MATCHING RULES:
     - Instead of 'classes' use 'class' (singular)
 
 11. **Common Service Patterns**: Use these proven patterns:
-    
+
     # Single keyword search:
     WHERE toLower(s.name) CONTAINS 'wifi'
     WHERE toLower(s.name) CONTAINS 'appeal'
     WHERE toLower(s.name) CONTAINS 'computer'
-    
+
     # Multi-keyword search:
     WHERE toLower(s.name) CONTAINS 'story' AND toLower(s.name) CONTAINS 'time'
     WHERE toLower(s.name) CONTAINS 'job' AND toLower(s.name) CONTAINS 'assistance'
@@ -793,22 +792,23 @@ IMPORTANT:
 
 Answer with all available details:"""
 
+
 # ==============================================================================
 # Prompt Template Factory
 # ==============================================================================
 
 class PromptTemplateFactory:
     """Factory class for creating prompt templates."""
-    
+
     @staticmethod
     def create_spatial_cypher_prompt():
         """Create spatial Cypher generation prompt template."""
         return PromptTemplate(
-            input_variables=["schema", "question", "spatial_context", "memory_context", 
-                           "user_latitude", "user_longitude", "distance_threshold"],
+            input_variables=["schema", "question", "spatial_context", "memory_context",
+                             "user_latitude", "user_longitude", "distance_threshold"],
             template=SPATIAL_CYPHER_GENERATION_TEMPLATE
         )
-    
+
     @staticmethod
     def create_regular_cypher_prompt():
         """Create regular Cypher generation prompt template."""
@@ -816,7 +816,7 @@ class PromptTemplateFactory:
             input_variables=["schema", "question", "memory_context"],
             template=CYPHER_GENERATION_TEMPLATE
         )
-    
+
     @staticmethod
     def create_focused_qa_prompt():
         """Create focused QA prompt template."""
@@ -824,7 +824,7 @@ class PromptTemplateFactory:
             input_variables=["context", "question"],
             template=FOCUSED_QA_TEMPLATE
         )
-    
+
     @staticmethod
     def create_spatial_qa_prompt():
         """Create spatial QA prompt template."""
@@ -832,7 +832,7 @@ class PromptTemplateFactory:
             input_variables=["context", "question"],
             template=SPATIAL_QA_TEMPLATE
         )
-    
+
     @staticmethod
     def create_simple_qa_prompt():
         """Create simple QA prompt template."""

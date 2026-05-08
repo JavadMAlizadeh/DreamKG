@@ -1063,47 +1063,17 @@ else:
 
 st.markdown("---")
 
-# --- City Selector ---
+# Initialize selected city in session state (default Philadelphia)
 if 'selected_city' not in st.session_state:
     st.session_state['selected_city'] = 'Philadelphia'
 
-selected_city = st.selectbox(
-    "🏙️ Select City",
-    options=Config.SUPPORTED_CITIES,
-    index=Config.SUPPORTED_CITIES.index(st.session_state['selected_city']),
-    key='_city_selector_widget',
-    help="Switch between supported cities"
-)
-
-if selected_city != st.session_state['selected_city']:
-    st.session_state['selected_city'] = selected_city
-    # Clear chat history so examples update cleanly
-    if 'messages' in st.session_state:
-        del st.session_state['messages']
-    st.rerun()
-
-# Dynamic welcome message based on selected city
-_city_examples = {
-    "Philadelphia": [
-        "Is there a library on West Lehigh Avenue with free Wi-Fi on Tuesdays?",
-        "Can you help me find a mental health service nearby?",
-        "Help me find some food, a library where I can print a document, and a place to stay.",
-    ],
-    "Los Angeles": [
-        "Is there a library in Koreatown with free Wi-Fi on Tuesdays?",
-        "Can you help me find a mental health service near Downtown LA?",
-        "Help me find some food, a library, and a shelter near Hollywood.",
-    ],
-}
-_examples = _city_examples.get(selected_city, _city_examples["Philadelphia"])
-
-st.markdown(f"""
-Welcome! Ask a question about **Food Banks**, **Mental Health Services**, **Shelters**, **Public Libraries**, and **Social Security offices** in **{selected_city}**.
+st.markdown("""
+Welcome! Ask a question about **Food Banks**, **Mental Health Services**, **Shelters**, **Public Libraries**, and **Social Security offices** in **Philadelphia** or **Los Angeles**.
 
 **Examples:**
-* {_examples[0]}
-* {_examples[1]}
-* {_examples[2]}
+* Is there a library in Koreatown with free Wi-Fi on Tuesdays?
+* Can you help me find a mental health service near Downtown LA?
+* Help me find some food, a library where I can print a document, and a place to stay in Philadelphia.
 
 **Before You Continue:**
 * Please enable location access to view results near to your target location.<br>        
@@ -1891,6 +1861,26 @@ def display_log_download_button(app_instance):
 # --- Main Interaction Logic ---
 if app:
     if prompt := st.chat_input("What are you looking for, where, and when?"):
+
+        # ============================================================================
+        # AUTO-DETECT CITY FROM QUERY - Rebuild app if city changed
+        # ============================================================================
+        _la_keywords = [
+            'los angeles', 'la ', ' la,', 'koreatown', 'hollywood', 'downtown la',
+            'santa monica', 'venice beach', 'echo park', 'silver lake', 'los feliz',
+            'westwood', 'ucla', 'usc', 'inglewood', 'compton', 'east la',
+            'boyle heights', 'culver city', 'long beach', 'pasadena', 'burbank',
+            'glendale', 'van nuys', 'north hollywood', 'studio city', 'skid row',
+            'little tokyo', 'chinatown la', 'macarthur park'
+        ]
+        _detected_city = 'Los Angeles' if any(kw in prompt.lower() for kw in _la_keywords) else 'Philadelphia'
+        if _detected_city != st.session_state.get('selected_city', 'Philadelphia'):
+            st.session_state['selected_city'] = _detected_city
+            # Force app rebuild on next get_session_app call
+            if 'app_instance' in st.session_state:
+                del st.session_state['app_instance']
+            app = get_session_app()
+            logging.info(f"City auto-detected and switched to: {_detected_city}")
 
         # ============================================================================
         # EXTRACT TIME CONTEXT FIRST - Before any flow decisions

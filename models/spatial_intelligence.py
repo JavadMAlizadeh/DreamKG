@@ -458,10 +458,14 @@ DISTANCE THRESHOLD: {distance_threshold} miles
 USER COORDINATES: user_latitude = {user_coordinates[0]}, user_longitude = {user_coordinates[1]}
 DISTANCE THRESHOLD: distance_threshold = {distance_threshold}
 
+CITY FILTER - CRITICAL:
+- This dataset covers {self._city_cfg['geocode_suffix']} ONLY.
+- You MUST include: toLower(l.state) = '{self._city_cfg["state"].lower()}' in the WHERE clause.
+- This prevents returning organizations from other cities or states.
+
 SPATIAL QUERY INSTRUCTIONS:
 - Include distance calculations in your Cypher query using the provided coordinates
-- Filter results ONLY by the distance threshold (distance_miles <= {distance_threshold})
-- DO NOT add location-based filters (street, city, zipcode, state) - distance filtering handles location
+- Filter results by BOTH the distance threshold (distance_miles <= {distance_threshold}) AND the state filter above
 - Sort results by distance (closest first)
 - Include distance_miles in the result set
 - The location "{location_text}" has been geocoded to coordinates - use distance, not text matching
